@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yerel Depolamalı Araç Envanteri Yönetimi</title>
-    <!-- Tailwind CSS'i yükle -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Inter fontu ve temel arkaplan stilini uygula */
@@ -29,8 +28,7 @@
             --tw-ring-color: #3b82f6; /* Blue-500 */
         }
     </style>
-    <!-- Bu kısım Firebase'e özgü import'ları içermez ve tamamen yerel JavaScript kullanır. -->
-</head>
+    </head>
 <body class="p-4 lg:p-10">
 
     <script>
@@ -42,7 +40,7 @@
         const vehicleListBody = document.getElementById('vehicleListBody');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const searchInput = document.getElementById('searchInput');
-        const userIdDisplay = document.getElementById('userIdDisplay'); // Kaldırılan Firebase göstergesi
+        // userIdDisplay yerine doğrudan yerel depolama durumu gösteriliyor
         
         // Form ve Liste Kontrol Elementleri
         const mainLayout = document.getElementById('mainLayout');
@@ -63,7 +61,11 @@
 
         let vehiclesData = []; // Uygulamanın ana veri yapısı
 
-        // Modal / Bildirim Gösterme Fonksiyonu (alert() yerine)
+        /**
+         * Bildirim Gösterme Fonksiyonu
+         * @param {string} message Gösterilecek mesaj
+         * @param {'success' | 'error' | 'info'} type Bildirim türü
+         */
         function showNotification(message, type = 'success') {
             const container = document.getElementById('notificationContainer');
             const color = type === 'success' ? 'bg-green-500' : (type === 'error' ? 'bg-red-500' : 'bg-blue-500');
@@ -95,7 +97,7 @@
                 }
             } catch (error) {
                 console.error("Yerel depolamadan yüklenirken hata oluştu:", error);
-                showNotification("Yerel verileriniz yüklenirken bir hata oluştu.", 'error');
+                showNotification("Yerel verileriniz yüklenirken bir hata oluştu. Tarayıcı ayarlarınızı kontrol edin.", 'error');
                 vehiclesData = [];
             }
             
@@ -111,10 +113,18 @@
                 localStorage.setItem(VEHICLES_KEY, JSON.stringify(vehiclesData));
             } catch (error) {
                 console.error("Yerel depolamaya kaydederken hata oluştu:", error);
-                showNotification("Veriler yerel depolamaya kaydedilirken hata oluştu.", 'error');
+                showNotification("Veriler yerel depolamaya kaydedilirken hata oluştu. Depolama alanı dolu olabilir.", 'error');
             }
         }
 
+        // Poliçe Bitişinin Yakın Olup Olmadığını Kontrol Et (90 günden az kaldıysa)
+        function isPolicyExpiringSoon(policyDate) {
+            const today = new Date();
+            const diffTime = policyDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+            return diffDays > 0 && diffDays < 90; // Bugün ile poliçe bitişi arasında 1-89 gün varsa
+        }
+        
         // Araç Listesini HTML'e Çizme Fonksiyonu
         function renderVehicles(vehicles) {
             vehicleListBody.innerHTML = ''; 
@@ -145,8 +155,8 @@
                 
                 const expiringSoon = isPolicyExpiringSoon(policyDateValue);
                 const badgeClasses = expiringSoon 
-                    ? 'bg-red-500 text-white shadow-md' 
-                    : 'bg-green-100 text-green-700'; 
+                    ? 'bg-red-500 text-white shadow-md font-extrabold' 
+                    : 'bg-green-100 text-green-700 font-semibold'; 
 
                 row.innerHTML = `
                     <td class="px-2 py-3 sm:p-4 table-cell font-bold text-gray-800">${vehicle.model}</td>
@@ -154,8 +164,9 @@
                     <td class="px-2 py-3 sm:p-4 table-cell text-gray-700">${vehicle.driver}</td>
                     <td class="px-2 py-3 sm:p-4 table-cell text-sm text-gray-500">${vehicle.unit}</td>
                     <td class="px-2 py-3 sm:p-4 table-cell whitespace-nowrap">
-                        <span class="inline-block py-1 px-3 text-xs font-semibold rounded-full ${badgeClasses}">
+                        <span class="inline-block py-1 px-3 text-xs rounded-full ${badgeClasses}">
                             ${formattedDate}
+                            ${expiringSoon ? ' (YAKINDA BİTİYOR)' : ''}
                         </span>
                     </td>
                     <td class="px-2 py-3 sm:p-4 table-cell text-right">
@@ -178,14 +189,6 @@
             });
         }
         
-        // Poliçe Bitişinin Yakın Olup Olmadığını Kontrol Et (90 günden az kaldıysa)
-        function isPolicyExpiringSoon(policyDate) {
-            const today = new Date();
-            const diffTime = policyDate - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-            return diffDays > 0 && diffDays < 90;
-        }
-
         // Yerel Depolamaya Tekli Araç Ekleme
         function addVehicle(vehicleData) {
             
@@ -203,7 +206,7 @@
             saveVehicles();
             filterAndRenderVehicles();
 
-            showNotification(`'${vehicleData.model}' başarıyla eklendi!`, 'success');
+            showNotification(`'${vehicleData.model}' başarıyla envantere eklendi.`, 'success');
             vehicleForm.reset(); 
             hideForm();
         }
@@ -219,36 +222,45 @@
                 filterAndRenderVehicles();
                 showNotification("Araç başarıyla envanterden silindi.", 'success');
             } else {
-                showNotification("Silinecek araç bulunamadı.", 'error');
+                showNotification("Silinecek araç bulunamadı. Liste güncel olmayabilir.", 'error');
             }
         }
         
         // Tablar Arasında Geçiş Fonksiyonu
         function switchTab(target) {
+            // Tailwind sınıflarını yönetme
+            const activeClasses = ['border-blue-600', 'text-blue-600'];
+            const inactiveClasses = ['border-transparent', 'text-gray-500'];
+            const hoverClasses = ['hover:text-blue-600', 'hover:border-blue-300'];
+
             if (target === 'single') {
                 singleEntryArea.classList.remove('hidden');
                 bulkImportArea.classList.add('hidden');
-                singleEntryTabBtn.classList.add('border-blue-600', 'text-blue-600');
-                singleEntryTabBtn.classList.remove('border-transparent', 'text-gray-500');
-                bulkImportTabBtn.classList.remove('border-blue-600', 'text-blue-600');
-                bulkImportTabBtn.classList.add('border-transparent', 'text-gray-500');
+                
+                singleEntryTabBtn.classList.add(...activeClasses);
+                singleEntryTabBtn.classList.remove(...inactiveClasses, ...hoverClasses);
+                
+                bulkImportTabBtn.classList.remove(...activeClasses);
+                bulkImportTabBtn.classList.add(...inactiveClasses, ...hoverClasses);
             } else {
                 bulkImportArea.classList.remove('hidden');
                 singleEntryArea.classList.add('hidden');
-                bulkImportTabBtn.classList.add('border-blue-600', 'text-blue-600');
-                bulkImportTabBtn.classList.remove('border-transparent', 'text-gray-500');
-                singleEntryTabBtn.classList.remove('border-blue-600', 'text-blue-600');
-                singleEntryTabBtn.classList.add('border-transparent', 'text-gray-500');
+
+                bulkImportTabBtn.classList.add(...activeClasses);
+                bulkImportTabBtn.classList.remove(...inactiveClasses, ...hoverClasses);
+                
+                singleEntryTabBtn.classList.remove(...activeClasses);
+                singleEntryTabBtn.classList.add(...inactiveClasses, ...hoverClasses);
             }
         }
 
         // Formu Gizle Fonksiyonu (Mobil için kritik)
         function hideForm() {
             formSection.classList.add('hidden');
-            listSection.classList.add('lg:col-span-2');
-            mainLayout.classList.add('lg:grid-cols-1', 'lg:has-hidden-form'); // CSS'e özel sınıf ekle
-            toggleFormButton.classList.remove('bg-red-500', 'hover:bg-red-600');
-            toggleFormButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            // listSection.classList.add('lg:col-span-2'); // CSS'deki media query hallediyor
+            mainLayout.classList.add('has-hidden-form'); // CSS'e özel sınıf ekle
+            toggleFormButton.classList.remove('bg-red-500', 'hover:bg-red-600', 'focus:ring-red-300');
+            toggleFormButton.classList.add('bg-blue-500', 'hover:bg-blue-600', 'focus:ring-blue-300');
             plusIcon.classList.remove('hidden');
             minusIcon.classList.add('hidden');
         }
@@ -256,10 +268,10 @@
         // Formu Göster Fonksiyonu
         function showForm() {
             formSection.classList.remove('hidden');
-            listSection.classList.remove('lg:col-span-2');
-            mainLayout.classList.remove('lg:grid-cols-1', 'lg:has-hidden-form'); // CSS'e özel sınıfı kaldır
-            toggleFormButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
-            toggleFormButton.classList.add('bg-red-500', 'hover:bg-red-600');
+            // listSection.classList.remove('lg:col-span-2'); // CSS'deki media query hallediyor
+            mainLayout.classList.remove('has-hidden-form'); // CSS'e özel sınıfı kaldır
+            toggleFormButton.classList.remove('bg-blue-500', 'hover:bg-blue-600', 'focus:ring-blue-300');
+            toggleFormButton.classList.add('bg-red-500', 'hover:bg-red-600', 'focus:ring-red-300');
             plusIcon.classList.add('hidden');
             minusIcon.classList.remove('hidden');
         }
@@ -326,11 +338,15 @@
             const errorMessages = [];
             const vehiclesToAdd = [];
 
-            showNotification(`Toplam ${lines.length} araç içe aktarılıyor...`, 'info');
+            showNotification(`Toplam ${lines.length} araç satırı işleniyor...`, 'info');
+
+            // Toplu eklemede benzersiz ID sağlamak için başlangıç zamanını al
+            const baseTimestamp = Date.now(); 
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
-                const parts = line.split(',').map(p => p.trim());
+                // CSV'nin temel ayrıştırması (tırnak işaretlerini dikkate almaz)
+                const parts = line.split(',').map(p => p.trim()); 
 
                 if (parts.length !== 5) {
                     failedCount++;
@@ -340,7 +356,14 @@
 
                 const [model, plate, driver, unit, policyEnd] = parts;
                 
-                // Poliçe Bitiş Tarihi Kontrolü
+                // Plaka ve Modelin boş olmaması temel kontrolü
+                if (!model || !plate) {
+                    failedCount++;
+                    errorMessages.push(`Satır ${i + 1} (${plate || model}): Model veya Plaka boş bırakılamaz.`);
+                    continue;
+                }
+
+                // Poliçe Bitiş Tarihi Kontrolü (YYYY-MM-DD formatı ve geçerli tarih)
                 if (!/^\d{4}-\d{2}-\d{2}$/.test(policyEnd) || isNaN(new Date(policyEnd))) {
                     failedCount++;
                     errorMessages.push(`Satır ${i + 1} (${plate}): Geçersiz poliçe bitiş tarihi formatı (YYYY-MM-DD bekleniyor).`);
@@ -353,8 +376,8 @@
                     driver,
                     unit,
                     policyEnd: policyEnd, 
-                    id: Date.now() + i, // Toplu eklemede basit benzersiz ID sağlamak için
-                    createdAt: Date.now() // Sıralama için epoch time
+                    id: (baseTimestamp + i).toString(), // Toplu eklemede basit benzersiz ID sağlamak için
+                    createdAt: baseTimestamp + i // Sıralama için epoch time
                 });
                 successCount++;
             }
@@ -392,18 +415,25 @@
         function handleSingleEntrySubmit(e) {
             e.preventDefault();
             
-            const vehicleData = {
-                model: document.getElementById('model').value.trim(),
-                plate: document.getElementById('plate').value.trim(),
-                driver: document.getElementById('driver').value.trim(),
-                unit: document.getElementById('unit').value.trim(),
-                policyEnd: document.getElementById('policyEnd').value.trim(), 
-            };
+            const model = document.getElementById('model').value.trim();
+            const plate = document.getElementById('plate').value.trim();
+            const driver = document.getElementById('driver').value.trim();
+            const unit = document.getElementById('unit').value.trim();
+            const policyEnd = document.getElementById('policyEnd').value.trim(); 
 
-            if (Object.values(vehicleData).some(val => val === '')) {
+            // Basit Alan Kontrolü
+            if (!model || !plate || !driver || !unit || !policyEnd) {
                 showNotification("Lütfen tüm alanları doldurun.", 'error');
                 return;
             }
+            
+            // Tarih Kontrolü
+            if (isNaN(new Date(policyEnd))) {
+                showNotification("Geçersiz Poliçe Bitiş Tarihi.", 'error');
+                return;
+            }
+
+            const vehicleData = { model, plate, driver, unit, policyEnd };
             
             addVehicle(vehicleData);
         }
@@ -415,7 +445,7 @@
             // Firebase'e ait UI elementini gizle veya kaldır (Geri uyumluluk için)
             const userIdDisp = document.getElementById('userIdDisplay');
             if (userIdDisp) {
-                userIdDisp.textContent = "Durum: Yerel Depolama (localStorage)";
+                userIdDisp.textContent = "Bağlantı: Yerel Depolama (localStorage)";
                 userIdDisp.classList.remove('text-gray-500', 'bg-gray-100');
                 userIdDisp.classList.add('text-indigo-700', 'bg-indigo-100');
             }
@@ -444,83 +474,67 @@
 
     </script>
 
-    <!-- Başlık ve Bağlantı Durumu -->
     <header class="mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center">
-        <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Yerel Araç Envanteri Yönetimi</h1>
+        <h1 class="text-4xl font-extrabold text-gray-900 mb-2">🚗 Yerel Araç Envanteri Yönetimi</h1>
         
-        <!-- Bağlantı Durumu ve Kullanıcı Bilgisi (Yerel Depolama Durumu) -->
         <div class="mb-4 text-sm text-gray-500">
             <span id="userIdDisplay" class="font-mono text-xs p-2 rounded-xl bg-gray-100 transition duration-300">Durum: Yerel Depolama (localStorage)</span>
         </div>
     </header>
 
-    <!-- Bildirim Konteyneri (Sağ Üst Köşe) -->
     <div id="notificationContainer" class="fixed top-4 right-4 z-50 flex flex-col items-end space-y-2">
-        <!-- Bildirimler buraya JS ile eklenecek -->
-    </div>
+        </div>
 
-    <!-- Ana Düzen (Form ve Liste) - Mobil Cihazlarda Sütunları Üst Üste Yığar -->
     <main id="mainLayout" class="grid grid-cols-1 gap-8 main-layout">
         
-        <!-- Sol Kolon: Araç Ekleme Formu (Gizli Başlar) -->
         <section id="formSection" class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 lg:sticky lg:top-10 h-min transition-all duration-300 ease-in-out">
             <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3 text-blue-600">Yeni Araç Kaydı</h2>
 
-            <!-- Yeni: Sekme Seçimi -->
             <div class="flex mb-6 border-b border-gray-200">
                 <button id="singleEntryTabBtn" class="py-2 px-4 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 transition duration-150 focus:outline-none">Tekli Giriş</button>
                 <button id="bulkImportTabBtn" class="py-2 px-4 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300 transition duration-150 focus:outline-none">Toplu Ekleme</button>
             </div>
             
-            <!-- Tekli Giriş Alanı -->
             <div id="singleEntryArea">
                 <form id="vehicleForm" class="space-y-5">
                     
-                    <!-- Araç Modeli -->
                     <div>
-                        <label for="model" class="block text-sm font-medium text-gray-700 mb-1">Araç Modeli</label>
+                        <label for="model" class="block text-sm font-medium text-gray-700 mb-1">Araç Modeli <span class="text-red-500">*</span></label>
                         <input type="text" id="model" name="model" required class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20" placeholder="Örn: Ford Focus">
                     </div>
 
-                    <!-- Plaka -->
                     <div>
-                        <label for="plate" class="block text-sm font-medium text-gray-700 mb-1">Plaka</label>
+                        <label for="plate" class="block text-sm font-medium text-gray-700 mb-1">Plaka <span class="text-red-500">*</span></label>
                         <input type="text" id="plate" name="plate" required class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20" placeholder="Örn: 34 ABC 123">
                     </div>
 
-                    <!-- Kullanan Kişi -->
                     <div>
-                        <label for="driver" class="block text-sm font-medium text-gray-700 mb-1">Kullanan Kişi</label>
+                        <label for="driver" class="block text-sm font-medium text-gray-700 mb-1">Kullanan Kişi <span class="text-red-500">*</span></label>
                         <input type="text" id="driver" name="driver" required class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20" placeholder="Örn: Ali Yılmaz">
                     </div>
 
-                    <!-- Birim -->
                     <div>
-                        <label for="unit" class="block text-sm font-medium text-gray-700 mb-1">Birim (Departman)</label>
+                        <label for="unit" class="block text-sm font-medium text-gray-700 mb-1">Birim (Departman) <span class="text-red-500">*</span></label>
                         <input type="text" id="unit" name="unit" required class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20" placeholder="Örn: Satış, Muhasebe">
                     </div>
 
-                    <!-- Poliçe Bitiş Tarihi -->
                     <div>
-                        <label for="policyEnd" class="block text-sm font-medium text-gray-700 mb-1">Poliçe Bitiş Tarihi</label>
+                        <label for="policyEnd" class="block text-sm font-medium text-gray-700 mb-1">Poliçe Bitiş Tarihi <span class="text-red-500">*</span></label>
                         <input type="date" id="policyEnd" name="policyEnd" required class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20">
                     </div>
 
-                    <!-- Kaydet Butonu -->
                     <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition duration-300 shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-green-300 focus:ring-opacity-50 mt-6">
                         Aracı Envantere Kaydet
                     </button>
                 </form>
             </div>
 
-            <!-- Toplu Ekleme Alanı -->
             <div id="bulkImportArea" class="hidden">
                 <p class="text-sm text-gray-700 mb-4 bg-yellow-50 p-4 rounded-xl border border-yellow-200">
                     Verileri **CSV dosyası (.csv)** ile yükleyebilir veya aşağıdaki alana yapıştırabilirsiniz. <br>
                     <span class="font-semibold text-yellow-800">Gerekli Alan Sırası: </span> <code class="font-mono text-sm text-red-700">Model, Plaka, Sürücü, Birim, Poliçe Bitiş (YYYY-MM-DD)</code>
                 </p>
                 
-                <!-- Yeni Dosya Yükleme Alanı -->
                 <div class="mb-5 p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 transition duration-150">
                     <label for="bulkFileInput" class="block text-sm font-medium text-gray-700 mb-2">CSV Dosyası Yükle (.csv)</label>
                     <input type="file" id="bulkFileInput" accept=".csv" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
@@ -547,31 +561,25 @@
 
         </section>
         
-        <!-- Sağ Kolon: Araç Listesi -->
-        <section id="listSection" class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 lg:col-span-2">
+        <section id="listSection" class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
             
-            <!-- Başlık ve Buton Yan Yana -->
             <div class="flex justify-between items-center mb-6 border-b pb-3">
                 <h2 class="text-2xl font-bold text-gray-800 text-indigo-600">Kayıtlı Araçlar Listesi</h2>
                 
-                <!-- Formu Göster/Gizle İKON Butonu -->
                 <button id="toggleFormButton" title="Yeni Araç Ekle/Formu Gizle" class="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full transition duration-300 shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300 flex items-center justify-center">
                     <svg id="plusIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     <svg id="minusIcon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
                 </button>
             </div>
             
-            <!-- Arama Kutusu -->
             <div class="mb-6">
                 <input type="text" id="searchInput" placeholder="Model, plaka, sürücü, birim veya poliçe bitiş tarihine göre ara..." class="input-focus w-full px-4 py-3 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20">
             </div>
 
-            <!-- Yükleniyor Göstergesi -->
             <div id="loadingIndicator" class="text-center py-12 text-blue-500 font-semibold text-lg">
                 Veriler Yerel Depolamadan Yükleniyor...
             </div>
 
-            <!-- Araç Tablosu (Mobil için yatay kaydırmalı) -->
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50 border-b-2 border-gray-200">
@@ -585,8 +593,7 @@
                         </tr>
                     </thead>
                     <tbody id="vehicleListBody" class="bg-white divide-y divide-gray-200">
-                        <!-- Araçlar buraya JavaScript ile eklenecek -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
         </section>
