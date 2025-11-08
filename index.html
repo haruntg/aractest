@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kurumsal Araç Envanteri Yönetimi</title>
+    <title>Yerel Depolamalı Araç Envanteri Yönetimi</title>
     <!-- Tailwind CSS'i yükle -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Inter fontu ve temel arkaplan stilini uygula */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6; /* Daha açık ve sade arkaplan */
@@ -28,57 +29,20 @@
             --tw-ring-color: #3b82f6; /* Blue-500 */
         }
     </style>
-    <!-- Firebase Modülleri -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, addDoc, deleteDoc, onSnapshot, collection, query, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- Bu kısım Firebase'e özgü import'ları içermez ve tamamen yerel JavaScript kullanır. -->
+</head>
+<body class="p-4 lg:p-10">
 
-        // --- DIKKAT: HARICI ORTAMDA (GITHUB PAGES VB.) KULLANIM ICIN GEREKLI ALAN ---
-        // Uygulamanin bu ortam disinda calismasi icin, lutfen kendi Firebase projenizin ayarlarini 
-        // asagidaki EXTERNAL_FIREBASE_CONFIG objesine TAMAMEN yapistirin.
-        const EXTERNAL_FIREBASE_CONFIG = {
-            apiKey: "YOUR_API_KEY_HERE", // <-- HARICI ORTAM ICIN YER TUTUCU
-            authDomain: "your-project-id.firebaseapp.com", 
-            projectId: "your-project-id", 
-            storageBucket: "your-project-id.appspot.com",
-            messagingSenderId: "123456789012",
-            appId: "1:123456789012:web:abcdef0123456789"
-        };
-        // ------------------------------------------------------------------------
-
-        // Firebase Global Değişkenler
-        let db;
-        let auth;
-        let userId = null;
-        const VEHICLES_COLLECTION = 'vehicles';
-        let vehiclesData = []; 
-
-        // Gerekli global değişkenleri al ve JSON'dan parse et
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    <script>
+        // Sabitler
+        const VEHICLES_KEY = 'corporate_vehicles_inventory'; // localStorage anahtarı
         
-        // InitialAuthToken yalnızca bu platformda çalışır. Harici ortamda null olacaktır.
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        // Ortam yapılandırmasını önceliklendir, yoksa harici yapılandırmayı kullan
-        let firebaseConfig;
-        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-            try {
-                firebaseConfig = JSON.parse(__firebase_config);
-            } catch (e) {
-                console.error("Firebase yapılandırması JSON parse hatası:", e);
-                firebaseConfig = EXTERNAL_FIREBASE_CONFIG;
-            }
-        } else {
-             firebaseConfig = EXTERNAL_FIREBASE_CONFIG; // Platform sağlamazsa hariciye düş
-        }
-            
         // UI Elementleri
         const vehicleForm = document.getElementById('vehicleForm');
         const vehicleListBody = document.getElementById('vehicleListBody');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const searchInput = document.getElementById('searchInput');
-        const userIdDisplay = document.getElementById('userIdDisplay'); 
+        const userIdDisplay = document.getElementById('userIdDisplay'); // Kaldırılan Firebase göstergesi
         
         // Form ve Liste Kontrol Elementleri
         const mainLayout = document.getElementById('mainLayout');
@@ -97,15 +61,8 @@
         const bulkImportButton = document.getElementById('bulkImportButton');
         const bulkFileInput = document.getElementById('bulkFileInput');
 
+        let vehiclesData = []; // Uygulamanın ana veri yapısı
 
-        // Firestore Koleksiyon Yolunu Oluşturma
-        function getCollectionRef() {
-            // Firestore Güvenlik Kurallarına uygun olarak private kullanıcı verisi yolu
-            const path = `artifacts/${appId}/users/${userId}/${VEHICLES_COLLECTION}`;
-            console.log("Firestore Koleksiyon Yolu:", path);
-            return collection(db, path);
-        }
-        
         // Modal / Bildirim Gösterme Fonksiyonu (alert() yerine)
         function showNotification(message, type = 'success') {
             const container = document.getElementById('notificationContainer');
@@ -127,6 +84,37 @@
             }, 6000); 
         }
 
+        // 1. Yerel Depolamadan Verileri Yükle
+        function loadVehicles() {
+            try {
+                const storedVehicles = localStorage.getItem(VEHICLES_KEY);
+                if (storedVehicles) {
+                    vehiclesData = JSON.parse(storedVehicles);
+                } else {
+                     vehiclesData = []; 
+                }
+            } catch (error) {
+                console.error("Yerel depolamadan yüklenirken hata oluştu:", error);
+                showNotification("Yerel verileriniz yüklenirken bir hata oluştu.", 'error');
+                vehiclesData = [];
+            }
+            
+            // Verileri createdAt (yaratılış zamanı) ile tersten sırala (en yeni üstte)
+            vehiclesData.sort((a, b) => b.createdAt - a.createdAt);
+            filterAndRenderVehicles(); 
+            loadingIndicator.classList.add('hidden');
+        }
+
+        // 2. Verileri Yerel Depolamaya Kaydet
+        function saveVehicles() {
+            try {
+                localStorage.setItem(VEHICLES_KEY, JSON.stringify(vehiclesData));
+            } catch (error) {
+                console.error("Yerel depolamaya kaydederken hata oluştu:", error);
+                showNotification("Veriler yerel depolamaya kaydedilirken hata oluştu.", 'error');
+            }
+        }
+
         // Araç Listesini HTML'e Çizme Fonksiyonu
         function renderVehicles(vehicles) {
             vehicleListBody.innerHTML = ''; 
@@ -135,7 +123,7 @@
                 const searchTerm = searchInput.value.trim();
                 const message = searchTerm 
                     ? `"${searchTerm}" ile eşleşen araç bulunamadı.` 
-                    : `Henüz kayıtlı araç bulunmamaktadır.`;
+                    : `Henüz kayıtlı araç bulunmamaktadır. Yerel depolama kullanılıyor.`;
                 vehicleListBody.innerHTML = `
                     <tr>
                         <td colspan="6" class="p-4 text-center text-gray-400 italic">
@@ -150,8 +138,8 @@
                 const row = document.createElement('tr');
                 row.className = 'border-b border-gray-100 hover:bg-blue-50/50 transition duration-200';
 
-                // Firestore'dan gelen policyEnd string veya Date olabilir.
-                const policyDateValue = vehicle.policyEnd && vehicle.policyEnd.toDate ? vehicle.policyEnd.toDate() : new Date(vehicle.policyEnd);
+                // Poliçe Bitiş Tarihi, zaten YYYY-MM-DD string olarak bekleniyor
+                const policyDateValue = new Date(vehicle.policyEnd); 
 
                 const formattedDate = isNaN(policyDateValue) ? 'Tarih Yok' : policyDateValue.toLocaleDateString('tr-TR', { year: 'numeric', month: 'short', day: 'numeric' });
                 
@@ -182,7 +170,7 @@
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const id = e.currentTarget.dataset.id;
-                    // window.confirm yerine geçici olarak tarayıcının kendi confirm'i kullanılıyor.
+                    // Kullanıcıya onay soran özel bir modal UI kullanın
                     if (window.confirm("Bu aracı gerçekten silmek istiyor musunuz? Geri alınamaz bir işlemdir.")) {
                          deleteVehicle(id);
                     }
@@ -193,50 +181,45 @@
         // Poliçe Bitişinin Yakın Olup Olmadığını Kontrol Et (90 günden az kaldıysa)
         function isPolicyExpiringSoon(policyDate) {
             const today = new Date();
-            // policyDate zaten Date nesnesi
             const diffTime = policyDate - today;
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
             return diffDays > 0 && diffDays < 90;
         }
 
-        // Firestore'a Tekli Araç Ekleme
-        async function addVehicle(vehicleData) {
-            if (!db || !userId) {
-                showNotification("Veritabanı hazır değil veya kimlik doğrulaması tamamlanmadı. Lütfen bekleyin.", 'error');
-                return;
-            }
-            try {
-                await addDoc(getCollectionRef(), {
-                    ...vehicleData,
-                    createdAt: serverTimestamp() 
-                });
-                showNotification(`'${vehicleData.model}' başarıyla eklendi!`, 'success');
-                vehicleForm.reset(); 
-                
-                // Başarılı eklemeden sonra formu otomatik olarak gizle (mobil deneyimi için kritik)
-                hideForm();
+        // Yerel Depolamaya Tekli Araç Ekleme
+        function addVehicle(vehicleData) {
+            
+            // Firestore'daki serverTimestamp yerine yerel zaman kullan
+            const newVehicle = {
+                ...vehicleData,
+                id: Date.now().toString(), // Basit benzersiz kimlik (string olarak)
+                createdAt: Date.now() // Sıralama için epoch time
+            };
+        
+            vehiclesData.push(newVehicle);
+            
+            // Sıralama ve kaydetme
+            vehiclesData.sort((a, b) => b.createdAt - a.createdAt); 
+            saveVehicles();
+            filterAndRenderVehicles();
 
-            } catch (e) {
-                console.error("Araç eklenirken hata oluştu: ", e);
-                showNotification("Tekli araç eklenirken bir hata oluştu: " + e.message, 'error');
-            }
+            showNotification(`'${vehicleData.model}' başarıyla eklendi!`, 'success');
+            vehicleForm.reset(); 
+            hideForm();
         }
 
-        // Firestore'dan Araç Silme
-        async function deleteVehicle(id) {
-            if (!db || !userId) {
-                showNotification("Silme işlemi için kimlik doğrulama tamamlanmadı. Lütfen bekleyin.", 'error');
-                return;
-            }
-
-            try {
-                const docRef = doc(getCollectionRef(), id);
-                await deleteDoc(docRef);
+        // Yerel Depolamadan Araç Silme
+        function deleteVehicle(id) {
+            const initialLength = vehiclesData.length;
+            // ID'ye göre filtrele (silmek istediğimizi listeden çıkar)
+            vehiclesData = vehiclesData.filter(vehicle => vehicle.id !== id);
+            
+            if (vehiclesData.length < initialLength) {
+                saveVehicles();
+                filterAndRenderVehicles();
                 showNotification("Araç başarıyla envanterden silindi.", 'success');
-            } catch (e) {
-                const errorMessage = e.message || "Bilinmeyen bir hata oluştu.";
-                console.error("Araç silinirken hata oluştu: ", e);
-                showNotification(`Araç silinirken bir hata oluştu: ${errorMessage}. Konsolu kontrol edin.`, 'error');
+            } else {
+                showNotification("Silinecek araç bulunamadı.", 'error');
             }
         }
         
@@ -291,16 +274,15 @@
             }
 
             const filtered = vehiclesData.filter(vehicle => {
-                // Poliçe Bitiş tarihi Firestore Timestamp ise toDate() kullan
-                const policyEndString = (vehicle.policyEnd && vehicle.policyEnd.toDate) 
-                    ? vehicle.policyEnd.toDate().toLocaleDateString('tr-TR', { year: 'numeric', month: 'short', day: 'numeric' })
-                    : (vehicle.policyEnd || '');
+                
+                // Poliçe bitiş tarihi YYYY-MM-DD string olarak gelir.
+                const policyEndString = vehicle.policyEnd || ''; 
 
                 return vehicle.model.toLowerCase().includes(searchTerm) ||
                        vehicle.plate.toLowerCase().includes(searchTerm) ||
                        vehicle.driver.toLowerCase().includes(searchTerm) ||
                        vehicle.unit.toLowerCase().includes(searchTerm) ||
-                       policyEndString.toLowerCase().includes(searchTerm); // Tarihi de arama dahil et
+                       policyEndString.toLowerCase().includes(searchTerm); 
 
             });
 
@@ -309,11 +291,6 @@
 
         // Toplu İçe Aktarımı Yönetme Fonksiyonu
         async function handleBulkImport() {
-            if (!db || !userId) {
-                showNotification("Lütfen kimlik doğrulamanın tamamlanmasını bekleyin.", 'error');
-                return;
-            }
-
             let rawData = '';
 
             // 1. Dosya Yüklemesi Kontrolü
@@ -347,8 +324,9 @@
             let successCount = 0;
             let failedCount = 0;
             const errorMessages = [];
+            const vehiclesToAdd = [];
 
-            showNotification(`Toplam ${lines.length} araç içe aktarılıyor... Lütfen bekleyin.`, 'info');
+            showNotification(`Toplam ${lines.length} araç içe aktarılıyor...`, 'info');
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
@@ -369,31 +347,33 @@
                     continue;
                 }
                 
-                try {
-                    await addDoc(getCollectionRef(), {
-                        model,
-                        plate,
-                        driver,
-                        unit,
-                        policyEnd: policyEnd, // String olarak sakla, tarih kontrolü yapıldı
-                        createdAt: serverTimestamp()
-                    });
-                    successCount++;
-                } catch (e) {
-                    console.error(`Satır ${i + 1} için Firestore hatası:`, e);
-                    failedCount++;
-                    errorMessages.push(`Satır ${i + 1} (${plate}): Veritabanı hatası.`);
-                }
+                vehiclesToAdd.push({
+                    model,
+                    plate,
+                    driver,
+                    unit,
+                    policyEnd: policyEnd, 
+                    id: Date.now() + i, // Toplu eklemede basit benzersiz ID sağlamak için
+                    createdAt: Date.now() // Sıralama için epoch time
+                });
+                successCount++;
             }
+            
+            // Başarılı eklemeleri ana listeye ekle
+            vehiclesData = [...vehiclesData, ...vehiclesToAdd];
+            
+            // Kaydet ve render et
+            vehiclesData.sort((a, b) => b.createdAt - a.createdAt);
+            saveVehicles();
+            filterAndRenderVehicles();
+
 
             let summaryMessage = `Başarılı: ${successCount} araç eklendi.`;
             let summaryType = 'success';
 
             if (failedCount > 0) {
-                // Hata mesajını showNotification içinde HTML olarak göndermek yerine daha güvenli hale getiriyoruz.
                 summaryMessage = `Başarılı: ${successCount} araç eklendi. HATA: ${failedCount} araç eklenemedi. Detayları konsolu kontrol edin.`;
                 summaryType = 'error';
-                // Konsola detaylı hataları yazdır
                 console.error("Toplu İçe Aktarma Detaylı Hataları:", errorMessages);
             }
             
@@ -407,130 +387,11 @@
             // İşlem bitince formu gizle
             hideForm();
         }
-
-
-        // Firestore'dan Gerçek Zamanlı Veri Dinleme
-        function setupRealtimeListener() {
-            if (!db || !userId) {
-                console.warn("Dinleyici başlatılamadı: DB veya Kullanıcı kimliği eksik.");
-                return;
-            }
-            
-            const q = query(getCollectionRef()); 
-
-            onSnapshot(q, (snapshot) => {
-                const fetchedVehicles = []; 
-                snapshot.forEach((doc) => {
-                    fetchedVehicles.push({ id: doc.id, ...doc.data() });
-                });
-                
-                // Verileri JavaScript'te sırala (en yeni üstte)
-                fetchedVehicles.sort((a, b) => {
-                    const timeA = a.createdAt?.toMillis() || 0;
-                    const timeB = b.createdAt?.toMillis() || 0;
-                    return timeB - timeA; 
-                });
-
-
-                vehiclesData = fetchedVehicles; 
-                filterAndRenderVehicles(); 
-                
-                loadingIndicator.classList.add('hidden'); 
-            }, (error) => {
-                // HATA: Veri okuma hatası (Genellikle Security Rules ihlali)
-                console.error("Gerçek zamanlı veri dinlenirken hata oluştu (Security Rules kontrolü yapın):", error);
-                loadingIndicator.textContent = `HATA: Veri yüklenemedi. Detay: ${error.message}. Firestore Güvenlik Kurallarınızı **OKUMA** izni için kontrol edin.`;
-                loadingIndicator.classList.remove('text-blue-500');
-                loadingIndicator.classList.add('text-red-500');
-                showNotification(`Veri yüklenirken bir sorun oluştu: ${error.message}. Konsolu inceleyin.`, 'error');
-            });
-        }
-
-        // Firebase ve Kimlik Doğrulama Başlatma
-        async function initFirebase() {
-            
-            // 1. Yapılandırma Kontrolü GÜÇLENDİRİLDİ
-            // Yalnızca platformda değilsek VE API anahtarı boşsa uyarı ver.
-            if (!initialAuthToken && firebaseConfig.apiKey === "YOUR_API_KEY_HERE") {
-                const errorMessage = "HATA: Bu uygulama harici bir ortamda (Canvas dışında) çalışıyorsa, lütfen EXTERNAL_FIREBASE_CONFIG'teki anahtarları doldurun. Canvas içinde iseniz bu hata kodun çalışmasını engellememelidir.";
-                console.error(errorMessage);
-                // loadingIndicator'ı güncellemeyi, sadece kimlik doğrulama başarısız olursa yapıyoruz.
-            }
-            
-            // 2. Firebase Uygulamasını Başlatma
-            try {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-            } catch (error) {
-                 console.error("Firebase başlatma hatası (Yapılandırma sorunu olabilir):", error);
-                 loadingIndicator.textContent = `HATA: Firebase başlatılamadı. Yapılandırma bilgilerinizi (apiKey, projectId vb.) kontrol edin. Konsolu inceleyin. Detay: ${error.message}`;
-                 loadingIndicator.classList.add('text-red-500');
-                 return;
-            }
-            
-            setLogLevel('debug'); 
-
-            // 3. Kimlik Doğrulama Durumu İzleme (SIGN IN öncesinde ayarlanır)
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    userId = user.uid;
-                    // Kullanıcı ID'sini ekranda göster
-                    userIdDisplay.textContent = `Durum: Bağlandı (ID: ${userId})`;
-                    userIdDisplay.classList.remove('text-gray-500');
-                    userIdDisplay.classList.add('text-green-700', 'bg-green-100');
-                    setupRealtimeListener(); // Başarılı auth sonrası veri dinlemeyi başlat
-                } else {
-                    userId = null;
-                    userIdDisplay.textContent = "Durum: Kimlik Doğrulanıyor...";
-                    userIdDisplay.classList.remove('text-green-700', 'bg-green-100');
-                    userIdDisplay.classList.add('text-gray-500');
-                    loadingIndicator.textContent = "Lütfen kimlik doğrulamanın tamamlanmasını bekleyin.";
-                }
-            });
-
-            // 4. Kimlik Doğrulama İşlemini Başlatma (State change'i tetiklemek için)
-            try {
-                // Platform token'i varsa kullan, yoksa anonim giriş yap (harici mod)
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    // Bu, GitHub Pages gibi harici ortamlarda çalışır. Anonim Auth GEREKLİDİR.
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                // HATA: Kimlik doğrulama başarısız oldu
-                console.error("Firebase Kimlik Doğrulama Hatası:", error);
-                loadingIndicator.textContent = `Kimlik doğrulama başarısız oldu. Detay: ${error.message}. Firebase projenizde **Anonim Kimlik Doğrulamayı (Anonymous Authentication)** etkinleştirdiğinizden ve tarayıcı konsolunuzu (F12) kontrol ettiğinizden emin olun.`;
-                loadingIndicator.classList.remove('text-blue-500');
-                loadingIndicator.classList.add('text-red-500');
-                return;
-            }
-            
-            // Başlangıçta formu gizle (mobil öncelik)
-            hideForm();
-        }
-
-        // Formu gizle/göster
-        toggleFormButton.addEventListener('click', () => {
-            const isHidden = formSection.classList.contains('hidden');
-            
-            if (isHidden) {
-                showForm();
-            } else {
-                hideForm();
-            }
-        });
         
         // Form Gönderimini Yönetme (Tekli Giriş)
-        vehicleForm.addEventListener('submit', (e) => {
+        function handleSingleEntrySubmit(e) {
             e.preventDefault();
             
-            if (!db || !userId) {
-                showNotification("Lütfen kimlik doğrulamanın tamamlanmasını bekleyin.", 'error');
-                return;
-            }
-
             const vehicleData = {
                 model: document.getElementById('model').value.trim(),
                 plate: document.getElementById('plate').value.trim(),
@@ -545,33 +406,51 @@
             }
             
             addVehicle(vehicleData);
-        });
-        
-        // Sekme Butonlarına Olay Dinleyicisi
-        singleEntryTabBtn.addEventListener('click', () => switchTab('single'));
-        bulkImportTabBtn.addEventListener('click', () => switchTab('bulk'));
-        
-        // Toplu Ekleme Butonuna Olay Dinleyicisi
-        bulkImportButton.addEventListener('click', handleBulkImport);
+        }
 
-        // Arama Kutusu Olay Dinleyicisi
-        searchInput.addEventListener('input', filterAndRenderVehicles);
 
+        // Uygulama Başlatma Fonksiyonu
+        function initApp() {
+            
+            // Firebase'e ait UI elementini gizle veya kaldır (Geri uyumluluk için)
+            const userIdDisp = document.getElementById('userIdDisplay');
+            if (userIdDisp) {
+                userIdDisp.textContent = "Durum: Yerel Depolama (localStorage)";
+                userIdDisp.classList.remove('text-gray-500', 'bg-gray-100');
+                userIdDisp.classList.add('text-indigo-700', 'bg-indigo-100');
+            }
+
+
+            // Olay dinleyicilerini ayarla
+            toggleFormButton.addEventListener('click', () => {
+                const isHidden = formSection.classList.contains('hidden');
+                if (isHidden) { showForm(); } else { hideForm(); }
+            });
+            vehicleForm.addEventListener('submit', handleSingleEntrySubmit);
+            singleEntryTabBtn.addEventListener('click', () => switchTab('single'));
+            bulkImportTabBtn.addEventListener('click', () => switchTab('bulk'));
+            bulkImportButton.addEventListener('click', handleBulkImport);
+            searchInput.addEventListener('input', filterAndRenderVehicles);
+            
+            // Verileri yükle
+            loadVehicles();
+
+            // Başlangıçta formu gizle
+            hideForm();
+        }
 
         // Uygulamayı başlat
-        window.onload = initFirebase;
+        window.onload = initApp;
 
     </script>
-</head>
-<body class="p-4 lg:p-10">
 
     <!-- Başlık ve Bağlantı Durumu -->
     <header class="mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center">
-        <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Kurumsal Araç Envanteri</h1>
+        <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Yerel Araç Envanteri Yönetimi</h1>
         
-        <!-- Bağlantı Durumu ve Kullanıcı Bilgisi -->
+        <!-- Bağlantı Durumu ve Kullanıcı Bilgisi (Yerel Depolama Durumu) -->
         <div class="mb-4 text-sm text-gray-500">
-            <span id="userIdDisplay" class="font-mono text-xs p-2 rounded-xl bg-gray-100 transition duration-300">Durum: Kimlik Doğrulanıyor...</span>
+            <span id="userIdDisplay" class="font-mono text-xs p-2 rounded-xl bg-gray-100 transition duration-300">Durum: Yerel Depolama (localStorage)</span>
         </div>
     </header>
 
@@ -689,7 +568,7 @@
 
             <!-- Yükleniyor Göstergesi -->
             <div id="loadingIndicator" class="text-center py-12 text-blue-500 font-semibold text-lg">
-                Veriler Yükleniyor ve Kimlik Doğrulanıyor...
+                Veriler Yerel Depolamadan Yükleniyor...
             </div>
 
             <!-- Araç Tablosu (Mobil için yatay kaydırmalı) -->
