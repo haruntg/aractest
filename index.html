@@ -40,13 +40,16 @@
         // Eger kendi projeniz yoksa bu uygulama calismaz.
         const EXTERNAL_FIREBASE_CONFIG = {
             aconst firebaseConfig = {
-  apiKey: "AIzaSyDt7Aqhp-W0FkVC6_fLif2HGzzI6TD1Ou0",
-  authDomain: "arac-a204a.firebaseapp.com",
-  projectId: "arac-a204a",
-  storageBucket: "arac-a204a.firebasestorage.app",
-  messagingSenderId: "1095181851440",
-  appId: "1:1095181851440:web:18ac280287a247735ac6f5"
+        apiKey: "AIzaSyDt7Aqhp-W0FkVC6_fLif2HGzzI6TD1Ou0",
+        authDomain: "arac-a204a.firebaseapp.com",
+        projectId: "arac-a204a",
+        storageBucket: "arac-a204a.firebasestorage.app",
+        messagingSenderId: "1095181851440",
+        appId: "1:1095181851440:web:18ac280287a247735ac6f5"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
         // ------------------------------------------------------------------------
 
         // Firebase Global Değişkenler
