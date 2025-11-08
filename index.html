@@ -37,14 +37,15 @@
         // --- DIKKAT: HARICI ORTAMDA (GITHUB PAGES VB.) KULLANIM ICIN GEREKLI ALAN ---
         // Uygulamanin bu ortam disinda calismasi icin, lutfen kendi Firebase projenizin ayarlarini 
         // asagidaki EXTERNAL_FIREBASE_CONFIG objesine TAMAMEN yapistirin.
-        const firebaseConfig = {
-  apiKey: "AIzaSyDt7Aqhp-W0FkVC6_fLif2HGzzI6TD1Ou0",
-  authDomain: "arac-a204a.firebaseapp.com",
-  projectId: "arac-a204a",
-  storageBucket: "arac-a204a.firebasestorage.app",
-  messagingSenderId: "1095181851440",
-  appId: "1:1095181851440:web:18ac280287a247735ac6f5"
-};
+        // Bu adimi yapmazsaniz, uygulama "API Anahtarı eksik" hatasi verecektir.
+        const EXTERNAL_FIREBASE_CONFIG = {
+            apiKey: "YOUR_API_KEY_HERE", // <-- BURAYI KENDI ANAHTARINIZLA DEGISTIRIN
+            authDomain: "your-project-id.firebaseapp.com", // <-- BURAYI KENDI ALAN ADINIZLA DEGISTIRIN
+            projectId: "your-project-id", // <-- BURAYI KENDI PROJE ID'NIZLE DEGISTIRIN
+            storageBucket: "your-project-id.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef0123456789"
+        };
         // ------------------------------------------------------------------------
 
         // Firebase Global Değişkenler
@@ -93,7 +94,6 @@
         // Firestore Koleksiyon Yolunu Oluşturma
         function getCollectionRef() {
             // Firestore Güvenlik Kurallarına uygun olarak private kullanıcı verisi yolu
-            // Harici modda (initialAuthToken null ise) 'default-app-id' kullanilir.
             const path = `artifacts/${appId}/users/${userId}/${VEHICLES_COLLECTION}`;
             console.log("Firestore Koleksiyon Yolu:", path);
             return collection(db, path);
@@ -173,7 +173,7 @@
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const id = e.currentTarget.dataset.id;
-                    // window.confirm yerine kendi modalınızı kullanın, ancak hızlı çözüm için geçici olarak kullanıldı.
+                    // window.confirm yerine geçici olarak tarayıcının kendi confirm'i kullanılıyor.
                     if (window.confirm("Bu aracı gerçekten silmek istiyor musunuz? Geri alınamaz bir işlemdir.")) {
                          deleteVehicle(id);
                     }
@@ -421,9 +421,12 @@
                 
                 loadingIndicator.classList.add('hidden'); 
             }, (error) => {
+                // HATA: Veri okuma hatası (Genellikle Security Rules ihlali)
                 console.error("Gerçek zamanlı veri dinlenirken hata oluştu (Security Rules kontrolü yapın):", error);
-                showNotification(`Veri yüklenirken bir sorun oluştu: ${error.message}. Firestore Güvenlik Kurallarınızı kontrol edin.`, 'error');
-                loadingIndicator.classList.add('hidden');
+                loadingIndicator.textContent = `HATA: Veri yüklenemedi. Detay: ${error.message}. Firestore Güvenlik Kurallarınızı **OKUMA** izni için kontrol edin.`;
+                loadingIndicator.classList.remove('text-blue-500');
+                loadingIndicator.classList.add('text-red-500');
+                showNotification(`Veri yüklenirken bir sorun oluştu: ${error.message}. Konsolu inceleyin.`, 'error');
             });
         }
 
@@ -453,7 +456,25 @@
             
             setLogLevel('debug'); 
 
-            // 3. Kimlik Doğrulama
+            // 3. Kimlik Doğrulama Durumu İzleme (SIGN IN öncesinde ayarlanır)
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    userId = user.uid;
+                    // Kullanıcı ID'sini ekranda göster
+                    userIdDisplay.textContent = `Durum: Bağlandı (ID: ${userId})`;
+                    userIdDisplay.classList.remove('text-gray-500');
+                    userIdDisplay.classList.add('text-green-700', 'bg-green-100');
+                    setupRealtimeListener(); // Başarılı auth sonrası veri dinlemeyi başlat
+                } else {
+                    userId = null;
+                    userIdDisplay.textContent = "Durum: Kimlik Doğrulanıyor...";
+                    userIdDisplay.classList.remove('text-green-700', 'bg-green-100');
+                    userIdDisplay.classList.add('text-gray-500');
+                    loadingIndicator.textContent = "Lütfen kimlik doğrulamanın tamamlanmasını bekleyin.";
+                }
+            });
+
+            // 4. Kimlik Doğrulama İşlemini Başlatma (State change'i tetiklemek için)
             try {
                 // Platform token'i varsa kullan, yoksa anonim giriş yap (harici mod)
                 if (initialAuthToken) {
@@ -463,29 +484,13 @@
                     await signInAnonymously(auth);
                 }
             } catch (error) {
+                // HATA: Kimlik doğrulama başarısız oldu
                 console.error("Firebase Kimlik Doğrulama Hatası:", error);
-                loadingIndicator.textContent = `Kimlik doğrulama başarısız oldu. Firebase projenizde **Anonim Kimlik Doğrulamayı (Anonymous Authentication)** etkinleştirdiğinizden emin olun. Detay: ${error.message}`;
+                loadingIndicator.textContent = `Kimlik doğrulama başarısız oldu. Detay: ${error.message}. Firebase projenizde **Anonim Kimlik Doğrulamayı (Anonymous Authentication)** etkinleştirdiğinizden ve tarayıcı konsolunuzu (F12) kontrol ettiğinizden emin olun.`;
+                loadingIndicator.classList.remove('text-blue-500');
                 loadingIndicator.classList.add('text-red-500');
                 return;
             }
-            
-            // 4. Kimlik Doğrulama Durumu İzleme
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    userId = user.uid;
-                    // Kullanıcı ID'sini ekranda göster
-                    userIdDisplay.textContent = `Durum: Bağlandı (ID: ${userId})`;
-                    userIdDisplay.classList.remove('text-gray-500');
-                    userIdDisplay.classList.add('text-green-700', 'bg-green-100');
-                    setupRealtimeListener(); 
-                } else {
-                    userId = null;
-                    userIdDisplay.textContent = "Durum: Kimlik Doğrulanıyor...";
-                    userIdDisplay.classList.remove('text-green-700', 'bg-green-100');
-                    userIdDisplay.classList.add('text-gray-500');
-                    loadingIndicator.textContent = "Lütfen kimlik doğrulamanın tamamlanmasını bekleyin.";
-                }
-            });
             
             // Başlangıçta formu gizle (mobil öncelik)
             hideForm();
