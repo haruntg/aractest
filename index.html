@@ -45,39 +45,23 @@
         // Sabitler
         const VEHICLES_KEY = 'corporate_vehicles_inventory'; // localStorage anahtarı
         
-        // UI Elementleri (HTML'den ID'leri al)
-        const vehicleForm = document.getElementById('vehicleForm');
-        const vehicleListBody = document.getElementById('vehicleListBody');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const searchInput = document.getElementById('searchInput');
-        const userIdDisplay = document.getElementById('userIdDisplay'); 
-        
-        // Form ve Liste Kontrol Elementleri
-        const mainLayout = document.getElementById('mainLayout');
-        const toggleFormButton = document.getElementById('toggleFormButton');
-        const formSection = document.getElementById('formSection');
-        const listSection = document.getElementById('listSection');
-        const plusIcon = document.getElementById('plusIcon');
-        const minusIcon = document.getElementById('minusIcon');
-        
-        // Toplu Ekleme Elementleri
-        const singleEntryTabBtn = document.getElementById('singleEntryTabBtn');
-        const bulkImportTabBtn = document.getElementById('bulkImportTabBtn');
-        const singleEntryArea = document.getElementById('singleEntryArea');
-        const bulkImportArea = document.getElementById('bulkImportArea');
-        const bulkDataInput = document.getElementById('bulkDataInput');
-        const bulkImportButton = document.getElementById('bulkImportButton');
-        const bulkFileInput = document.getElementById('bulkFileInput');
+        // ************************************************************
+        // UI Elementlerini Yükleme (DOMContentLoaded'de çalışacak)
+        // ************************************************************
+        let vehicleForm, vehicleListBody, loadingIndicator, searchInput, userIdDisplay,
+            mainLayout, toggleFormButton, formSection, listSection, plusIcon, minusIcon,
+            singleEntryTabBtn, bulkImportTabBtn, singleEntryArea, bulkImportArea,
+            bulkDataInput, bulkImportButton, bulkFileInput;
 
         let vehiclesData = []; // Uygulamanın ana veri yapısı
 
         /**
          * Bildirim Gösterme Fonksiyonu
-         * @param {string} message Gösterilecek mesaj
-         * @param {'success' | 'error' | 'info'} type Bildirim türü
          */
         function showNotification(message, type = 'success') {
             const container = document.getElementById('notificationContainer');
+            if (!container) return; // Konteyner yoksa çık
+
             const color = type === 'success' ? 'bg-green-500' : (type === 'error' ? 'bg-red-500' : 'bg-blue-500');
 
             const notification = document.createElement('div');
@@ -86,13 +70,14 @@
 
             container.appendChild(notification);
 
+            // Görünür yap
             setTimeout(() => {
                 notification.classList.remove('opacity-0', 'translate-y-4');
             }, 10);
 
+            // Gizle ve kaldır
             setTimeout(() => {
                 notification.classList.add('opacity-0', 'translate-y-4');
-                // Animasyon bitince elementi DOM'dan kaldır
                 notification.addEventListener('transitionend', () => notification.remove());
             }, 6000); 
         }
@@ -104,14 +89,13 @@
                 vehiclesData = storedVehicles ? JSON.parse(storedVehicles) : [];
             } catch (error) {
                 console.error("Yerel depolamadan yüklenirken hata oluştu:", error);
-                showNotification("Yerel verileriniz yüklenirken bir hata oluştu.", 'error');
+                showNotification("Veriler yüklenemedi. Tarayıcınızda 'localStorage' devre dışı olabilir.", 'error');
                 vehiclesData = [];
             }
             
-            // En yeni aracın üstte olması için tersten sırala
             vehiclesData.sort((a, b) => b.createdAt - a.createdAt);
             filterAndRenderVehicles(); 
-            loadingIndicator.classList.add('hidden');
+            if (loadingIndicator) loadingIndicator.classList.add('hidden');
         }
 
         // 2. Verileri Yerel Depolamaya Kaydet
@@ -120,26 +104,30 @@
                 localStorage.setItem(VEHICLES_KEY, JSON.stringify(vehiclesData));
             } catch (error) {
                 console.error("Yerel depolamaya kaydederken hata oluştu:", error);
-                showNotification("Veriler yerel depolamaya kaydedilemedi.", 'error');
+                showNotification("Veriler yerel depolamaya kaydedilemedi. Depolama alanı dolu olabilir.", 'error');
             }
         }
 
         // Poliçe Bitişinin Yakın Olup Olmadığını Kontrol Et (90 günden az kaldıysa)
         function isPolicyExpiringSoon(policyDate) {
             const today = new Date();
-            today.setHours(0, 0, 0, 0); // Bugünün başlangıcı
+            today.setHours(0, 0, 0, 0); 
+            // policyDate'in geçerli bir tarih nesnesi olduğundan emin ol
+            if (isNaN(policyDate.getTime())) return false; 
+            
             const diffTime = policyDate.getTime() - today.getTime();
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-            // 0 gün veya daha az kaldıysa (geçtiyse) uyarı gösterme, 1-90 gün arası uyarı göster
             return diffDays > 0 && diffDays <= 90; 
         }
 
         // Araç Listesini HTML'e Çizme Fonksiyonu
         function renderVehicles(vehicles) {
+            if (!vehicleListBody) return;
             vehicleListBody.innerHTML = ''; 
             
+            // ... (HTML çizim mantığı aynı kalır) ...
             if (vehicles.length === 0) {
-                const searchTerm = searchInput.value.trim();
+                const searchTerm = searchInput ? searchInput.value.trim() : '';
                 const message = searchTerm 
                     ? `"${searchTerm}" ile eşleşen araç bulunamadı.` 
                     : `Henüz kayıtlı araç bulunmamaktadır. Yerel depolama kullanılıyor.`;
@@ -184,9 +172,11 @@
                 `;
                 vehicleListBody.appendChild(row);
             });
-
+            
+            // Delete listener'ları her çizimde yeniden eklenmelidir
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
+                    e.preventDefault();
                     const id = e.currentTarget.dataset.id;
                     if (window.confirm("Bu aracı gerçekten silmek istiyor musunuz? Geri alınamaz bir işlemdir.")) {
                          deleteVehicle(id);
@@ -195,70 +185,11 @@
             });
         }
         
-        // Yerel Depolamaya Tekli Araç Ekleme
-        function addVehicle(vehicleData) {
-            
-            const newVehicle = {
-                ...vehicleData,
-                id: Date.now().toString(), // Basit benzersiz kimlik
-                createdAt: Date.now() // Sıralama için epoch time
-            };
-        
-            vehiclesData.push(newVehicle);
-            vehiclesData.sort((a, b) => b.createdAt - a.createdAt); 
-            saveVehicles();
-            filterAndRenderVehicles();
-
-            showNotification(`'${vehicleData.model}' başarıyla envantere kaydedildi.`, 'success');
-            vehicleForm.reset(); 
-            hideForm();
-        }
-
-        // Yerel Depolamadan Araç Silme
-        function deleteVehicle(id) {
-            const initialLength = vehiclesData.length;
-            vehiclesData = vehiclesData.filter(vehicle => vehicle.id !== id);
-            
-            if (vehiclesData.length < initialLength) {
-                saveVehicles();
-                filterAndRenderVehicles();
-                showNotification("Araç başarıyla envanterden silindi.", 'success');
-            } else {
-                showNotification("Silinecek araç bulunamadı.", 'error');
-            }
-        }
-        
-        // Tablar Arasında Geçiş Fonksiyonu
-        function switchTab(target) {
-            const activeClasses = ['border-blue-600', 'text-blue-600'];
-            const inactiveClasses = ['border-transparent', 'text-gray-500'];
-            const hoverClasses = ['hover:text-blue-600', 'hover:border-blue-300'];
-
-            if (target === 'single') {
-                singleEntryArea.classList.remove('hidden');
-                bulkImportArea.classList.add('hidden');
-                
-                singleEntryTabBtn.classList.add(...activeClasses);
-                singleEntryTabBtn.classList.remove(...inactiveClasses, ...hoverClasses);
-                
-                bulkImportTabBtn.classList.remove(...activeClasses);
-                bulkImportTabBtn.classList.add(...inactiveClasses, ...hoverClasses);
-            } else {
-                bulkImportArea.classList.remove('hidden');
-                singleEntryArea.classList.add('hidden');
-
-                bulkImportTabBtn.classList.add(...activeClasses);
-                bulkImportTabBtn.classList.remove(...inactiveClasses, ...hoverClasses);
-                
-                singleEntryTabBtn.classList.remove(...activeClasses);
-                singleEntryTabBtn.classList.add(...inactiveClasses, ...hoverClasses);
-            }
-        }
-
         // Formu Gizle Fonksiyonu
         function hideForm() {
+            if (!formSection || !mainLayout || !toggleFormButton || !plusIcon || !minusIcon) return;
             formSection.classList.add('hidden');
-            mainLayout.classList.add('has-hidden-form'); // CSS Grid'i 1 kolon yapar
+            mainLayout.classList.add('has-hidden-form'); 
             toggleFormButton.classList.remove('bg-red-500', 'hover:bg-red-600', 'focus:ring-red-300');
             toggleFormButton.classList.add('bg-blue-500', 'hover:bg-blue-600', 'focus:ring-blue-300');
             plusIcon.classList.remove('hidden');
@@ -267,48 +198,28 @@
 
         // Formu Göster Fonksiyonu
         function showForm() {
+            if (!formSection || !mainLayout || !toggleFormButton || !plusIcon || !minusIcon) return;
             formSection.classList.remove('hidden');
-            mainLayout.classList.remove('has-hidden-form'); // CSS Grid'i 1fr 2fr yapar
+            mainLayout.classList.remove('has-hidden-form');
             toggleFormButton.classList.remove('bg-blue-500', 'hover:bg-blue-600', 'focus:ring-blue-300');
             toggleFormButton.classList.add('bg-red-500', 'hover:bg-red-600', 'focus:ring-red-300');
             plusIcon.classList.add('hidden');
             minusIcon.classList.remove('hidden');
         }
-        
-        // Filtreleme ve Çizme Fonksiyonu
-        function filterAndRenderVehicles() {
-            const searchTerm = searchInput.value.toLowerCase().trim();
-            
-            if (!searchTerm) {
-                renderVehicles(vehiclesData); 
-                return;
-            }
-
-            const filtered = vehiclesData.filter(vehicle => {
-                const policyEndString = vehicle.policyEnd || ''; 
-
-                return vehicle.model.toLowerCase().includes(searchTerm) ||
-                       vehicle.plate.toLowerCase().includes(searchTerm) ||
-                       vehicle.driver.toLowerCase().includes(searchTerm) ||
-                       vehicle.unit.toLowerCase().includes(searchTerm) ||
-                       policyEndString.toLowerCase().includes(searchTerm); 
-            });
-
-            renderVehicles(filtered);
-        }
 
         // Toplu İçe Aktarımı Yönetme Fonksiyonu
         async function handleBulkImport() {
+            if (!bulkDataInput || !bulkFileInput) return;
+            
             let rawData = '';
 
-            // Dosya ve Textarea'dan veri alımını kontrol et
+            // Dosya veya Textarea'dan veri al
             if (bulkFileInput.files.length > 0) {
                 const file = bulkFileInput.files[0];
-                if (!file.name.toLowerCase().endsWith('.csv')) {
+                if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv' && file.type !== 'application/vnd.ms-excel') {
                     showNotification("Lütfen geçerli bir CSV dosyası seçin.", 'error');
                     return;
                 }
-                showNotification(`'${file.name}' dosyası okunuyor...`, 'info');
                 
                 try {
                     rawData = await new Promise((resolve, reject) => {
@@ -318,7 +229,7 @@
                         reader.readAsText(file, 'UTF-8');
                     });
                 } catch (e) {
-                    showNotification("Dosya okuma sırasında bir hata oluştu.", 'error');
+                    showNotification("Dosya okuma sırasında hata oluştu. Lütfen dosya içeriğini yapıştırmayı deneyin.", 'error');
                     return;
                 }
             } else {
@@ -330,7 +241,7 @@
                 return;
             }
 
-            // Satırları işle
+            // ... (İşleme mantığı aynı kalır) ...
             const lines = rawData.split('\n').filter(line => line.trim() !== '');
             let successCount = 0;
             let failedCount = 0;
@@ -340,25 +251,22 @@
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
-                // Virgül ile ayır, baş ve sondaki boşlukları temizle
                 const parts = line.split(',').map(p => p.trim()); 
 
                 if (parts.length !== 5) {
                     failedCount++;
-                    errorMessages.push(`Satır ${i + 1} (${line.substring(0, 20)}...): Eksik veya fazla alan (5 bekleniyor).`);
+                    errorMessages.push(`Satır ${i + 1} (Önizleme: ${line.substring(0, 20)}...): Eksik veya fazla alan (5 bekleniyor).`);
                     continue;
                 }
 
                 const [model, plate, driver, unit, policyEnd] = parts;
                 
-                // Temel doğrulama
                 if (!model || !plate || !driver || !unit || !policyEnd) {
                     failedCount++;
                     errorMessages.push(`Satır ${i + 1} (${plate || model}): Tüm alanlar doldurulmalıdır.`);
                     continue;
                 }
 
-                // Tarih formatı ve geçerliliği
                 if (!/^\d{4}-\d{2}-\d{2}$/.test(policyEnd) || isNaN(new Date(policyEnd))) {
                     failedCount++;
                     errorMessages.push(`Satır ${i + 1} (${plate}): Geçersiz poliçe bitiş tarihi formatı (YYYY-MM-DD bekleniyor).`);
@@ -371,70 +279,61 @@
                     driver,
                     unit,
                     policyEnd: policyEnd, 
-                    id: (baseTimestamp + i).toString(),
+                    // Her satır için benzersiz ID sağlamak için i ekle
+                    id: (baseTimestamp + i).toString(), 
                     createdAt: baseTimestamp + i 
                 });
                 successCount++;
             }
             
-            // Başarılı eklemeleri ana listeye ekle
             vehiclesData = [...vehiclesData, ...vehiclesToAdd];
             vehiclesData.sort((a, b) => b.createdAt - a.createdAt);
             saveVehicles();
             filterAndRenderVehicles();
 
 
-            let summaryMessage = `İçe aktarma tamamlandı. ${successCount} araç eklendi.`;
+            let summaryMessage = `İçe aktarma tamamlandı. ${successCount} araç başarıyla eklendi.`;
             let summaryType = 'success';
 
             if (failedCount > 0) {
-                summaryMessage = `Başarılı: ${successCount} araç eklendi. HATA: ${failedCount} araç eklenemedi. Detayları konsolu kontrol edin.`;
+                summaryMessage = `Başarılı: ${successCount} araç eklendi. HATA: ${failedCount} araç eklenemedi. Detayları konsolu kontrol edin (F12).`;
                 summaryType = 'error';
                 console.error("Toplu İçe Aktarma Detaylı Hataları:", errorMessages);
             }
             
             showNotification(summaryMessage, summaryType);
             
-            // Başarılı işlem sonrası formları temizle
             if (successCount > 0) {
                 bulkDataInput.value = ''; 
                 bulkFileInput.value = ''; 
             }
             
-            // İşlem bitince formu gizle
             hideForm();
-        }
-        
-        // Form Gönderimini Yönetme (Tekli Giriş)
-        function handleSingleEntrySubmit(e) {
-            e.preventDefault();
-            
-            const model = document.getElementById('model').value.trim();
-            const plate = document.getElementById('plate').value.trim();
-            const driver = document.getElementById('driver').value.trim();
-            const unit = document.getElementById('unit').value.trim();
-            const policyEnd = document.getElementById('policyEnd').value.trim(); 
-
-            // Basit Alan Kontrolü
-            if (!model || !plate || !driver || !unit || !policyEnd) {
-                showNotification("Lütfen tüm alanları doldurun.", 'error');
-                return;
-            }
-            
-            // Tarih Kontrolü
-            if (isNaN(new Date(policyEnd))) {
-                showNotification("Geçersiz Poliçe Bitiş Tarihi.", 'error');
-                return;
-            }
-
-            const vehicleData = { model, plate, driver, unit, policyEnd };
-            
-            addVehicle(vehicleData);
         }
 
 
         // Uygulama Başlatma Fonksiyonu
         function initApp() {
+            // UI Elementlerini Yükle
+            vehicleForm = document.getElementById('vehicleForm');
+            vehicleListBody = document.getElementById('vehicleListBody');
+            loadingIndicator = document.getElementById('loadingIndicator');
+            searchInput = document.getElementById('searchInput');
+            userIdDisplay = document.getElementById('userIdDisplay'); 
+            mainLayout = document.getElementById('mainLayout');
+            toggleFormButton = document.getElementById('toggleFormButton');
+            formSection = document.getElementById('formSection');
+            listSection = document.getElementById('listSection');
+            plusIcon = document.getElementById('plusIcon');
+            minusIcon = document.getElementById('minusIcon');
+            singleEntryTabBtn = document.getElementById('singleEntryTabBtn');
+            bulkImportTabBtn = document.getElementById('bulkImportTabBtn');
+            singleEntryArea = document.getElementById('singleEntryArea');
+            bulkImportArea = document.getElementById('bulkImportArea');
+            bulkDataInput = document.getElementById('bulkDataInput');
+            bulkImportButton = document.getElementById('bulkImportButton');
+            bulkFileInput = document.getElementById('bulkFileInput');
+
             
             // Bağlantı durumunu güncelle
             if (userIdDisplay) {
@@ -444,29 +343,27 @@
             }
 
 
-            // Olay dinleyicilerini ayarla
-            toggleFormButton.addEventListener('click', () => {
+            // Olay dinleyicilerini ayarla (Tüm elementlerin varlığını kontrol et)
+            if (toggleFormButton) toggleFormButton.addEventListener('click', () => {
                 const isHidden = formSection.classList.contains('hidden');
                 if (isHidden) { showForm(); } else { hideForm(); }
             });
-            vehicleForm.addEventListener('submit', handleSingleEntrySubmit);
-            singleEntryTabBtn.addEventListener('click', () => switchTab('single'));
-            bulkImportTabBtn.addEventListener('click', () => switchTab('bulk'));
-            bulkImportButton.addEventListener('click', handleBulkImport);
-            searchInput.addEventListener('input', filterAndRenderVehicles);
+            if (vehicleForm) vehicleForm.addEventListener('submit', handleSingleEntrySubmit);
+            if (singleEntryTabBtn) singleEntryTabBtn.addEventListener('click', () => switchTab('single'));
+            if (bulkImportTabBtn) bulkImportTabBtn.addEventListener('click', () => switchTab('bulk'));
+            if (bulkImportButton) bulkImportButton.addEventListener('click', handleBulkImport);
+            if (searchInput) searchInput.addEventListener('input', filterAndRenderVehicles);
             
             // Verileri yükle
             loadVehicles();
 
-            // Başlangıçta formu gizle
+            // Başlangıçta formu gizle ve tekli girişi seç
             hideForm();
-            
-            // Başlangıçta Tekli Giriş sekmesini seçili yap
             switchTab('single'); 
         }
 
-        // Uygulamayı başlat
-        window.onload = initApp;
+        // DOM içeriği yüklendiğinde başlat (resimlerin yüklenmesini beklemez, daha hızlıdır)
+        document.addEventListener('DOMContentLoaded', initApp);
 
     </script>
 
