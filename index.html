@@ -34,6 +34,21 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, addDoc, deleteDoc, onSnapshot, collection, query, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // --- DIKKAT: DIS ORTAMDA (GITHUB PAGES VB.) KULLANIM ICIN GEREKLI ALAN ---
+        // Uygulamanin bu ortam disinda calismasi icin, lutfen kendi Firebase projenizin ayarlarini 
+        // asagidaki EXTERNAL_FIREBASE_CONFIG objesine yapistirin.
+        // Eger kendi projeniz yoksa bu uygulama calismaz.
+        const EXTERNAL_FIREBASE_CONFIG = {
+            aconst firebaseConfig = {
+  apiKey: "AIzaSyDt7Aqhp-W0FkVC6_fLif2HGzzI6TD1Ou0",
+  authDomain: "arac-a204a.firebaseapp.com",
+  projectId: "arac-a204a",
+  storageBucket: "arac-a204a.firebasestorage.app",
+  messagingSenderId: "1095181851440",
+  appId: "1:1095181851440:web:18ac280287a247735ac6f5"
+};
+        // ------------------------------------------------------------------------
+
         // Firebase Global Değişkenler
         let db;
         let auth;
@@ -43,7 +58,13 @@
 
         // Gerekli global değişkenleri al ve JSON'dan parse et
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        
+        // Ortam yapılandırmasını önceliklendir, yoksa harici yapılandırmayı kullan
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : EXTERNAL_FIREBASE_CONFIG; // Harici yapılandırmaya düşüş
+            
+        // InitialAuthToken yalnızca bu platformda çalışır. Harici ortamda null olacaktır.
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // UI Elementleri
@@ -51,6 +72,7 @@
         const vehicleListBody = document.getElementById('vehicleListBody');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const searchInput = document.getElementById('searchInput');
+        const userIdDisplay = document.getElementById('userIdDisplay'); 
         
         // Form ve Liste Kontrol Elementleri
         const mainLayout = document.getElementById('mainLayout');
@@ -73,6 +95,7 @@
         // Firestore Koleksiyon Yolunu Oluşturma
         function getCollectionRef() {
             // Firestore Güvenlik Kurallarına uygun olarak private kullanıcı verisi yolu
+            // Harici modda (initialAuthToken null ise) 'default-app-id' kullanilir.
             const path = `artifacts/${appId}/users/${userId}/${VEHICLES_COLLECTION}`;
             console.log("Firestore Koleksiyon Yolu:", path);
             return collection(db, path);
@@ -152,6 +175,7 @@
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const id = e.currentTarget.dataset.id;
+                    // window.confirm yerine kendi modalınızı kullanın, ancak hızlı çözüm için geçici olarak kullanıldı.
                     if (window.confirm("Bu aracı gerçekten silmek istiyor musunuz? Geri alınamaz bir işlemdir.")) {
                          deleteVehicle(id);
                     }
@@ -352,9 +376,11 @@
             let summaryType = 'success';
 
             if (failedCount > 0) {
-                const errorsHtml = errorMessages.map(msg => `<span class="block">${msg}</span>`).join('');
-                summaryMessage += `<br>HATA: ${failedCount} araç eklenemedi. Detaylar:<div class="mt-2 p-2 bg-red-400 rounded">${errorsHtml}</div>`;
+                // Hata mesajını showNotification içinde HTML olarak göndermek yerine daha güvenli hale getiriyoruz.
+                summaryMessage = `Başarılı: ${successCount} araç eklendi. HATA: ${failedCount} araç eklenemedi. Detayları konsolu kontrol edin.`;
                 summaryType = 'error';
+                // Konsola detaylı hataları yazdır
+                console.error("Toplu İçe Aktarma Detaylı Hataları:", errorMessages);
             }
             
             showNotification(summaryMessage, summaryType);
@@ -405,8 +431,12 @@
 
         // Firebase ve Kimlik Doğrulama Başlatma
         async function initFirebase() {
-            if (!firebaseConfig) {
-                console.error("Firebase yapılandırması eksik. Uygulama başlatılamıyor.");
+            // Harici modda (GitHub Pages) iseniz ve API key girilmediyse uyarı verin.
+            if (!initialAuthToken && firebaseConfig.apiKey === "YOUR_API_KEY_HERE") {
+                const errorMessage = "HATA: Harici ortamda (GitHub Pages) Firebase API Anahtarı eksik! Lütfen 'EXTERNAL_FIREBASE_CONFIG' içindeki 'YOUR_API_KEY_HERE' yerine kendi anahtarınızı girin.";
+                console.error(errorMessage);
+                loadingIndicator.textContent = errorMessage;
+                loadingIndicator.classList.add('text-red-500');
                 return;
             }
             
@@ -417,6 +447,7 @@
             setLogLevel('debug'); 
 
             try {
+                // Platform token'i varsa kullan, yoksa anonim giriş yap (harici mod)
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
@@ -431,9 +462,16 @@
             onAuthStateChanged(auth, (user) => {
                 if (user) {
                     userId = user.uid;
+                    // Kullanıcı ID'sini ekranda göster
+                    userIdDisplay.textContent = `Durum: Bağlandı (ID: ${userId})`;
+                    userIdDisplay.classList.remove('text-gray-500');
+                    userIdDisplay.classList.add('text-green-700', 'bg-green-100');
                     setupRealtimeListener(); 
                 } else {
                     userId = null;
+                    userIdDisplay.textContent = "Durum: Kimlik Doğrulanıyor...";
+                    userIdDisplay.classList.remove('text-green-700', 'bg-green-100');
+                    userIdDisplay.classList.add('text-gray-500');
                     loadingIndicator.textContent = "Lütfen kimlik doğrulamanın tamamlanmasını bekleyin.";
                 }
             });
@@ -496,9 +534,14 @@
 </head>
 <body class="p-4 lg:p-10">
 
-    <!-- Başlık -->
-    <header class="mb-8 text-center lg:text-left">
+    <!-- Başlık ve Bağlantı Durumu -->
+    <header class="mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center">
         <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Kurumsal Araç Envanteri</h1>
+        
+        <!-- Bağlantı Durumu ve Kullanıcı Bilgisi -->
+        <div class="mb-4 text-sm text-gray-500">
+            <span id="userIdDisplay" class="font-mono text-xs p-2 rounded-xl bg-gray-100 transition duration-300">Durum: Kimlik Doğrulanıyor...</span>
+        </div>
     </header>
 
     <!-- Bildirim Konteyneri (Sağ Üst Köşe) -->
