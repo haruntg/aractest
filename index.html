@@ -34,22 +34,17 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, addDoc, deleteDoc, onSnapshot, collection, query, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- DIKKAT: DIS ORTAMDA (GITHUB PAGES VB.) KULLANIM ICIN GEREKLI ALAN ---
+        // --- DIKKAT: HARICI ORTAMDA (GITHUB PAGES VB.) KULLANIM ICIN GEREKLI ALAN ---
         // Uygulamanin bu ortam disinda calismasi icin, lutfen kendi Firebase projenizin ayarlarini 
-        // asagidaki EXTERNAL_FIREBASE_CONFIG objesine yapistirin.
-        // Eger kendi projeniz yoksa bu uygulama calismaz.
-        const EXTERNAL_FIREBASE_CONFIG = {
-            aconst firebaseConfig = {
-        apiKey: "AIzaSyDt7Aqhp-W0FkVC6_fLif2HGzzI6TD1Ou0",
-        authDomain: "arac-a204a.firebaseapp.com",
-        projectId: "arac-a204a",
-        storageBucket: "arac-a204a.firebasestorage.app",
-        messagingSenderId: "1095181851440",
-        appId: "1:1095181851440:web:18ac280287a247735ac6f5"
+        // asagidaki EXTERNAL_FIREBASE_CONFIG objesine TAMAMEN yapistirin.
+        const firebaseConfig = {
+  apiKey: "AIzaSyDt7Aqhp-W0FkVC6_fLif2HGzzI6TD1Ou0",
+  authDomain: "arac-a204a.firebaseapp.com",
+  projectId: "arac-a204a",
+  storageBucket: "arac-a204a.firebasestorage.app",
+  messagingSenderId: "1095181851440",
+  appId: "1:1095181851440:web:18ac280287a247735ac6f5"
 };
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
         // ------------------------------------------------------------------------
 
         // Firebase Global Değişkenler
@@ -426,42 +421,55 @@ const app = initializeApp(firebaseConfig);
                 
                 loadingIndicator.classList.add('hidden'); 
             }, (error) => {
-                console.error("Gerçek zamanlı veri dinlenirken hata oluştu:", error);
-                showNotification(`Veri yüklenirken bir sorun oluştu: ${error.message}. Konsolu kontrol edin.`, 'error');
+                console.error("Gerçek zamanlı veri dinlenirken hata oluştu (Security Rules kontrolü yapın):", error);
+                showNotification(`Veri yüklenirken bir sorun oluştu: ${error.message}. Firestore Güvenlik Kurallarınızı kontrol edin.`, 'error');
                 loadingIndicator.classList.add('hidden');
             });
         }
 
         // Firebase ve Kimlik Doğrulama Başlatma
         async function initFirebase() {
-            // Harici modda (GitHub Pages) iseniz ve API key girilmediyse uyarı verin.
+            
+            // 1. Yapılandırma Kontrolü (Harici Ortam için)
             if (!initialAuthToken && firebaseConfig.apiKey === "YOUR_API_KEY_HERE") {
-                const errorMessage = "HATA: Harici ortamda (GitHub Pages) Firebase API Anahtarı eksik! Lütfen 'EXTERNAL_FIREBASE_CONFIG' içindeki 'YOUR_API_KEY_HERE' yerine kendi anahtarınızı girin.";
+                const errorMessage = "HATA: Harici ortamda (GitHub Pages) Firebase API Anahtarı eksik! Lütfen 'EXTERNAL_FIREBASE_CONFIG' içindeki tüm placeholder'ları kendi anahtarınızla değiştirin.";
                 console.error(errorMessage);
                 loadingIndicator.textContent = errorMessage;
                 loadingIndicator.classList.add('text-red-500');
                 return;
             }
             
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
+            // 2. Firebase Uygulamasını Başlatma
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+            } catch (error) {
+                 console.error("Firebase başlatma hatası (Yapılandırma sorunu olabilir):", error);
+                 loadingIndicator.textContent = `HATA: Firebase başlatılamadı. Yapılandırma bilgilerinizi (apiKey, projectId vb.) kontrol edin. Konsolu inceleyin. Detay: ${error.message}`;
+                 loadingIndicator.classList.add('text-red-500');
+                 return;
+            }
             
             setLogLevel('debug'); 
 
+            // 3. Kimlik Doğrulama
             try {
                 // Platform token'i varsa kullan, yoksa anonim giriş yap (harici mod)
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
+                    // Bu, GitHub Pages gibi harici ortamlarda çalışır. Anonim Auth GEREKLİDİR.
                     await signInAnonymously(auth);
                 }
             } catch (error) {
                 console.error("Firebase Kimlik Doğrulama Hatası:", error);
-                loadingIndicator.textContent = "Kimlik doğrulama başarısız oldu. Lütfen konsolu kontrol edin.";
+                loadingIndicator.textContent = `Kimlik doğrulama başarısız oldu. Firebase projenizde **Anonim Kimlik Doğrulamayı (Anonymous Authentication)** etkinleştirdiğinizden emin olun. Detay: ${error.message}`;
+                loadingIndicator.classList.add('text-red-500');
                 return;
             }
             
+            // 4. Kimlik Doğrulama Durumu İzleme
             onAuthStateChanged(auth, (user) => {
                 if (user) {
                     userId = user.uid;
