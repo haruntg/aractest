@@ -37,11 +37,10 @@
         // --- DIKKAT: HARICI ORTAMDA (GITHUB PAGES VB.) KULLANIM ICIN GEREKLI ALAN ---
         // Uygulamanin bu ortam disinda calismasi icin, lutfen kendi Firebase projenizin ayarlarini 
         // asagidaki EXTERNAL_FIREBASE_CONFIG objesine TAMAMEN yapistirin.
-        // Bu adimi yapmazsaniz, uygulama "API Anahtarı eksik" hatasi verecektir.
         const EXTERNAL_FIREBASE_CONFIG = {
-            apiKey: "YOUR_API_KEY_HERE", // <-- BURAYI KENDI ANAHTARINIZLA DEGISTIRIN
-            authDomain: "your-project-id.firebaseapp.com", // <-- BURAYI KENDI ALAN ADINIZLA DEGISTIRIN
-            projectId: "your-project-id", // <-- BURAYI KENDI PROJE ID'NIZLE DEGISTIRIN
+            apiKey: "YOUR_API_KEY_HERE", // <-- HARICI ORTAM ICIN YER TUTUCU
+            authDomain: "your-project-id.firebaseapp.com", 
+            projectId: "your-project-id", 
             storageBucket: "your-project-id.appspot.com",
             messagingSenderId: "123456789012",
             appId: "1:123456789012:web:abcdef0123456789"
@@ -58,14 +57,22 @@
         // Gerekli global değişkenleri al ve JSON'dan parse et
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
-        // Ortam yapılandırmasını önceliklendir, yoksa harici yapılandırmayı kullan
-        const firebaseConfig = typeof __firebase_config !== 'undefined' 
-            ? JSON.parse(__firebase_config) 
-            : EXTERNAL_FIREBASE_CONFIG; // Harici yapılandırmaya düşüş
-            
         // InitialAuthToken yalnızca bu platformda çalışır. Harici ortamda null olacaktır.
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
+        
+        // Ortam yapılandırmasını önceliklendir, yoksa harici yapılandırmayı kullan
+        let firebaseConfig;
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+            try {
+                firebaseConfig = JSON.parse(__firebase_config);
+            } catch (e) {
+                console.error("Firebase yapılandırması JSON parse hatası:", e);
+                firebaseConfig = EXTERNAL_FIREBASE_CONFIG;
+            }
+        } else {
+             firebaseConfig = EXTERNAL_FIREBASE_CONFIG; // Platform sağlamazsa hariciye düş
+        }
+            
         // UI Elementleri
         const vehicleForm = document.getElementById('vehicleForm');
         const vehicleListBody = document.getElementById('vehicleListBody');
@@ -143,10 +150,12 @@
                 const row = document.createElement('tr');
                 row.className = 'border-b border-gray-100 hover:bg-blue-50/50 transition duration-200';
 
-                const policyDate = new Date(vehicle.policyEnd);
-                const formattedDate = isNaN(policyDate) ? 'Tarih Yok' : policyDate.toLocaleDateString('tr-TR', { year: 'numeric', month: 'short', day: 'numeric' });
+                // Firestore'dan gelen policyEnd string veya Date olabilir.
+                const policyDateValue = vehicle.policyEnd && vehicle.policyEnd.toDate ? vehicle.policyEnd.toDate() : new Date(vehicle.policyEnd);
+
+                const formattedDate = isNaN(policyDateValue) ? 'Tarih Yok' : policyDateValue.toLocaleDateString('tr-TR', { year: 'numeric', month: 'short', day: 'numeric' });
                 
-                const expiringSoon = isPolicyExpiringSoon(vehicle.policyEnd);
+                const expiringSoon = isPolicyExpiringSoon(policyDateValue);
                 const badgeClasses = expiringSoon 
                     ? 'bg-red-500 text-white shadow-md' 
                     : 'bg-green-100 text-green-700'; 
@@ -182,9 +191,9 @@
         }
         
         // Poliçe Bitişinin Yakın Olup Olmadığını Kontrol Et (90 günden az kaldıysa)
-        function isPolicyExpiringSoon(dateString) {
+        function isPolicyExpiringSoon(policyDate) {
             const today = new Date();
-            const policyDate = new Date(dateString);
+            // policyDate zaten Date nesnesi
             const diffTime = policyDate - today;
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
             return diffDays > 0 && diffDays < 90;
@@ -282,11 +291,17 @@
             }
 
             const filtered = vehiclesData.filter(vehicle => {
+                // Poliçe Bitiş tarihi Firestore Timestamp ise toDate() kullan
+                const policyEndString = (vehicle.policyEnd && vehicle.policyEnd.toDate) 
+                    ? vehicle.policyEnd.toDate().toLocaleDateString('tr-TR', { year: 'numeric', month: 'short', day: 'numeric' })
+                    : (vehicle.policyEnd || '');
+
                 return vehicle.model.toLowerCase().includes(searchTerm) ||
                        vehicle.plate.toLowerCase().includes(searchTerm) ||
                        vehicle.driver.toLowerCase().includes(searchTerm) ||
                        vehicle.unit.toLowerCase().includes(searchTerm) ||
-                       vehicle.policyEnd.toLowerCase().includes(searchTerm);
+                       policyEndString.toLowerCase().includes(searchTerm); // Tarihi de arama dahil et
+
             });
 
             renderVehicles(filtered);
@@ -347,7 +362,8 @@
 
                 const [model, plate, driver, unit, policyEnd] = parts;
                 
-                if (!/^\d{4}-\d{2}-\d{2}$/.test(policyEnd)) {
+                // Poliçe Bitiş Tarihi Kontrolü
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(policyEnd) || isNaN(new Date(policyEnd))) {
                     failedCount++;
                     errorMessages.push(`Satır ${i + 1} (${plate}): Geçersiz poliçe bitiş tarihi formatı (YYYY-MM-DD bekleniyor).`);
                     continue;
@@ -359,7 +375,7 @@
                         plate,
                         driver,
                         unit,
-                        policyEnd,
+                        policyEnd: policyEnd, // String olarak sakla, tarih kontrolü yapıldı
                         createdAt: serverTimestamp()
                     });
                     successCount++;
@@ -433,13 +449,12 @@
         // Firebase ve Kimlik Doğrulama Başlatma
         async function initFirebase() {
             
-            // 1. Yapılandırma Kontrolü (Harici Ortam için)
+            // 1. Yapılandırma Kontrolü GÜÇLENDİRİLDİ
+            // Yalnızca platformda değilsek VE API anahtarı boşsa uyarı ver.
             if (!initialAuthToken && firebaseConfig.apiKey === "YOUR_API_KEY_HERE") {
-                const errorMessage = "HATA: Harici ortamda (GitHub Pages) Firebase API Anahtarı eksik! Lütfen 'EXTERNAL_FIREBASE_CONFIG' içindeki tüm placeholder'ları kendi anahtarınızla değiştirin.";
+                const errorMessage = "HATA: Bu uygulama harici bir ortamda (Canvas dışında) çalışıyorsa, lütfen EXTERNAL_FIREBASE_CONFIG'teki anahtarları doldurun. Canvas içinde iseniz bu hata kodun çalışmasını engellememelidir.";
                 console.error(errorMessage);
-                loadingIndicator.textContent = errorMessage;
-                loadingIndicator.classList.add('text-red-500');
-                return;
+                // loadingIndicator'ı güncellemeyi, sadece kimlik doğrulama başarısız olursa yapıyoruz.
             }
             
             // 2. Firebase Uygulamasını Başlatma
