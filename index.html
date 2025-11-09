@@ -133,16 +133,18 @@
             return diffDays > 0 && diffDays <= 90; 
         }
         
-        // Toplam Sayıyı Güncelleme Fonksiyonu (Daha yumuşak bir görünüm için metin güncellendi)
+        // ************************************************
+        // Sadeleştirilmiş: Toplam Sayıyı Güncelleme Fonksiyonu
+        // ************************************************
         function updateTotalCount(totalCount, filteredCount) {
             if (!totalCountDisplay) return;
 
             if (totalCount === filteredCount) {
-                // Filtreleme yapılmamışsa sadece toplamı göster
-                totalCountDisplay.innerHTML = `<span class="font-semibold text-gray-700">Toplam: </span><span class="font-bold text-lg text-indigo-700">${totalCount} Araç</span>`;
+                // Sadece toplamı rozet içinde göster
+                totalCountDisplay.innerHTML = `<span class="px-2 py-1 rounded-full bg-indigo-500 text-white font-bold text-base shadow-lg">${totalCount}</span>`;
             } else {
-                // Filtreleme yapılmışsa, filtreleneni ve toplamı göster
-                 totalCountDisplay.innerHTML = `<span class="font-bold text-lg text-indigo-700">${filteredCount} / ${totalCount} Araç </span><span class="text-gray-500 text-sm">(Filtrelenmiş)</span>`;
+                // Filtreleme yapılmışsa, filtrelenen/toplamı rozet içinde göster
+                 totalCountDisplay.innerHTML = `<span class="px-2 py-1 rounded-full bg-gray-600 text-white font-bold text-base shadow-lg">${filteredCount} / ${totalCount}</span>`;
             }
         }
 
@@ -551,7 +553,11 @@
         <section id="listSection" class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
             
             <div class="flex justify-between items-center mb-6 border-b pb-3">
-                <h2 class="text-2xl font-bold text-gray-800 text-indigo-600">Kayıtlı Araçlar Listesi</h2>
+                <div class="flex items-center space-x-3">
+                    <h2 class="text-2xl font-bold text-gray-800 text-indigo-600">Kayıtlı Araçlar</h2>
+                    <div id="totalCountDisplay" class="">
+                        </div>
+                </div>
                 
                 <button id="toggleFormButton" title="Yeni Araç Ekle/Formu Gizle" class="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full transition duration-300 shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300 flex items-center justify-center">
                     <svg id="plusIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -559,12 +565,9 @@
                 </button>
             </div>
             
-            <div class="mb-4">
+            <div class="mb-6">
                 <input type="text" id="searchInput" placeholder="Model, plaka, sürücü, birim veya poliçe bitiş tarihine göre ara..." class="input-focus w-full px-4 py-3 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20">
             </div>
-
-            <div id="totalCountDisplay" class="bg-gray-100 p-3 mb-4 rounded-lg text-left shadow-inner border border-gray-200">
-                </div>
 
             <div id="loadingIndicator" class="text-center py-12 text-blue-500 font-semibold text-lg">
                 Veriler Yerel Depolamadan Yükleniyor...
