@@ -48,7 +48,7 @@
             singleEntryTabBtn, bulkImportTabBtn, singleEntryArea, bulkImportArea,
             bulkDataInput, bulkImportButton, bulkFileInput, totalCountDisplay,
             deleteAllButton, formTitle, submitButton, cancelButton,
-            exportDataButton; // Yeni buton değişkeni
+            exportDataButton; 
             
         let vehiclesData = []; 
         let currentEditingId = null; 
@@ -76,7 +76,7 @@
             formTitle = document.getElementById('formTitle'); 
             submitButton = document.getElementById('submitButton'); 
             cancelButton = document.getElementById('cancelButton');
-            exportDataButton = document.getElementById('exportDataButton'); // Yeni butonu çek
+            exportDataButton = document.getElementById('exportDataButton'); 
         }
 
         /**
@@ -150,9 +150,7 @@
             }
         }
         
-        // ************************************************
-        // Yeni Fonksiyon: Veri Dışa Aktarma (Export)
-        // ************************************************
+        // Veri Dışa Aktarma (Export)
         function exportData(format) {
             if (vehiclesData.length === 0) {
                 showNotification("Dışa aktarılacak veri bulunmamaktadır.", 'error');
@@ -161,7 +159,7 @@
 
             let data, filename, mimeType;
             
-            // CSV için başlık satırı
+            // CSV için başlık satırı (Tüm alanlar: 5 manuel + 2 otomatik)
             const headers = ["model", "plate", "driver", "unit", "policyEnd", "createdAt", "id"];
             const headerRow = headers.join(',');
 
@@ -174,6 +172,7 @@
                     }).join(',')
                 );
                 
+                // İlk satır başlıklar, gerisi veriler.
                 data = headerRow + '\n' + csvRows.join('\n');
                 filename = `arac_envanter_yedek_${new Date().toISOString().slice(0, 10)}.csv`;
                 mimeType = 'text/csv';
@@ -487,7 +486,9 @@
             renderVehicles(filtered);
         }
 
-        // Toplu İçe Aktarımı Yönetme Fonksiyonu (Değişiklik Yok)
+        // ************************************************
+        // DÜZELTİLDİ: Toplu İçe Aktarımı Yönetme Fonksiyonu 
+        // ************************************************
         async function handleBulkImport() {
             if (!bulkDataInput || !bulkFileInput) return;
             
@@ -526,48 +527,73 @@
             }
 
             const lines = rawData.split('\n').filter(line => line.trim() !== '');
+            
+            // Eğer ilk satır başlık ise (export dosyasından geliyorsa), onu atla
+            // Basit bir kontrol: İlk satırda "model" kelimesini ara
+            let dataLines = lines;
+            if (dataLines.length > 0 && dataLines[0].toLowerCase().includes('model')) {
+                dataLines = lines.slice(1);
+            }
+            
             let successCount = 0;
             let failedCount = 0;
             const errorMessages = [];
             const vehiclesToAdd = [];
             const baseTimestamp = Date.now(); 
 
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                const parts = line.split(',').map(p => p.trim()); 
+            for (let i = 0; i < dataLines.length; i++) {
+                const line = dataLines[i];
+                // CSV'de tırnak içindeki virgülleri doğru işlemek için regex yerine basit split kullanıldı.
+                // Bu, manuel giriş için idealdir. İhraç edilen dosya için ise manuel tırnak temizliği yapılmalıdır.
+                // İhracat formatımız tırnaklı olduğu için, veriyi tırnaklardan arındırıp split edelim.
+                const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(p => p.replace(/^"|"$/g, '').trim()); 
 
-                if (parts.length !== 5) {
+                const numFields = parts.length;
+                let vehicleData = {};
+
+                // İhracat dosyası formatı (7 alan: model, plate, driver, unit, policyEnd, createdAt, id)
+                if (numFields === 7) {
+                    const [model, plate, driver, unit, policyEnd, createdAt, id] = parts;
+                    vehicleData = { model, plate, driver, unit, policyEnd, createdAt: parseInt(createdAt), id };
+                } 
+                // Manuel Giriş Formatı (5 alan: Model, Plaka, Sürücü, Birim, Poliçe Bitiş)
+                else if (numFields === 5) {
+                    const [model, plate, driver, unit, policyEnd] = parts;
+                    // Yeni kayıt olduğu için yeni zaman damgaları atıyoruz.
+                    vehicleData = { 
+                        model, 
+                        plate, 
+                        driver, 
+                        unit, 
+                        policyEnd, 
+                        id: (baseTimestamp + i).toString(), 
+                        createdAt: baseTimestamp + i 
+                    };
+                } else {
                     failedCount++;
-                    errorMessages.push(`Satır ${i + 1} (Önizleme: ${line.substring(0, 20)}...): Eksik veya fazla alan (5 bekleniyor).`);
+                    errorMessages.push(`Satır ${i + 1} (Önizleme: ${line.substring(0, 20)}...): Eksik/fazla alan. (5 veya 7 bekleniyor, ${numFields} geldi).`);
                     continue;
                 }
-
-                const [model, plate, driver, unit, policyEnd] = parts;
                 
-                if (!model || !plate || !driver || !unit || !policyEnd) {
+                // Temel doğrulama
+                if (!vehicleData.model || !vehicleData.plate || !vehicleData.driver || !vehicleData.unit || !vehicleData.policyEnd) {
                     failedCount++;
-                    errorMessages.push(`Satır ${i + 1} (${plate || model}): Tüm alanlar doldurulmalıdır.`);
+                    errorMessages.push(`Satır ${i + 1} (${vehicleData.plate || vehicleData.model}): Tüm temel alanlar doldurulmalıdır.`);
                     continue;
                 }
 
-                if (!/^\d{4}-\d{2}-\d{2}$/.test(policyEnd) || isNaN(new Date(policyEnd))) {
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(vehicleData.policyEnd) || isNaN(new Date(vehicleData.policyEnd))) {
                     failedCount++;
-                    errorMessages.push(`Satır ${i + 1} (${plate}): Geçersiz poliçe bitiş tarihi formatı (YYYY-MM-DD bekleniyor).`);
+                    errorMessages.push(`Satır ${i + 1} (${vehicleData.plate}): Geçersiz Poliçe Bitiş Tarihi formatı (YYYY-MM-DD bekleniyor).`);
                     continue;
                 }
                 
-                vehiclesToAdd.push({
-                    model,
-                    plate,
-                    driver,
-                    unit,
-                    policyEnd: policyEnd, 
-                    id: (baseTimestamp + i).toString(), 
-                    createdAt: baseTimestamp + i 
-                });
+                vehiclesToAdd.push(vehicleData);
                 successCount++;
             }
             
+            // Mevcut kayıtlarla çakışmayı önlemek için basit bir kontrol yapılabilir.
+            // Şimdilik çakışma kontrolünü atlayıp hepsini ekliyoruz.
             vehiclesData = [...vehiclesData, ...vehiclesToAdd];
             vehiclesData.sort((a, b) => b.createdAt - a.createdAt);
             saveVehicles();
@@ -643,10 +669,9 @@
                 showNotification("Düzenleme iptal edildi.", 'info');
             });
             
-            // Yeni: Export Butonu Olay Dinleyicisi
+            // Export Butonu Olay Dinleyicisi
             if (exportDataButton) {
                 exportDataButton.addEventListener('click', () => {
-                    // Kullanıcıya format seçeneği sunmak için basit bir prompt kullanabiliriz.
                     const format = prompt("Hangi formatta dışa aktarmak istersiniz? (csv veya json)", "csv");
                     if (format && (format.toLowerCase() === 'csv' || format.toLowerCase() === 'json')) {
                         exportData(format.toLowerCase());
@@ -721,7 +746,8 @@
             <div id="bulkImportArea" class="hidden">
                 <p class="text-sm text-gray-700 mb-4 bg-yellow-50 p-4 rounded-xl border border-yellow-200">
                     Verileri **CSV dosyası (.csv)** ile yükleyebilir veya aşağıdaki alana yapıştırabilirsiniz. <br>
-                    <span class="font-semibold text-yellow-800">Gerekli Alan Sırası: </span> <code class="font-mono text-sm text-red-700">Model, Plaka, Sürücü, Birim, Poliçe Bitiş (YYYY-MM-DD)</code>
+                    <span class="font-semibold text-yellow-800">Manuel Giriş (5 Alan): </span> <code class="font-mono text-sm text-red-700">Model, Plaka, Sürücü, Birim, Poliçe Bitiş (YYYY-MM-DD)</code><br>
+                    <span class="font-semibold text-yellow-800">Yedek Dosyası (7 Alan): </span> İhraç edilen tüm alanları içerir.
                 </p>
                 
                 <div class="mb-5 p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 transition duration-150">
