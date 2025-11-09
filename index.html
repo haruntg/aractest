@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Tabanlı Yerel Araç Envanteri</title>
+    <title>Araç Envanteri Yönetimi</title> 
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Inter fontu ve temel arkaplan stilini uygula */
@@ -38,7 +38,7 @@
 
     <script>
         // Sabitler
-        const VEHICLES_KEY = 'corporate_vehicles_inventory'; // localStorage anahtarı
+        const VEHICLES_KEY = 'corporate_vehicles_inventory'; 
         
         // ************************************************************
         // UI Elementlerini Yükleme ve Global Değişkenler
@@ -48,7 +48,7 @@
             singleEntryTabBtn, bulkImportTabBtn, singleEntryArea, bulkImportArea,
             bulkDataInput, bulkImportButton, bulkFileInput;
 
-        let vehiclesData = []; // Uygulamanın ana veri yapısı
+        let vehiclesData = []; 
 
         // Elementleri DOM'dan çekme fonksiyonu
         function getElements() {
@@ -141,7 +141,7 @@
                 const searchTerm = searchInput ? searchInput.value.trim() : '';
                 const message = searchTerm 
                     ? `"${searchTerm}" ile eşleşen araç bulunamadı.` 
-                    : `Henüz kayıtlı araç bulunmamaktadır. Veriler yerel depolamada saklanmaktadır.`;
+                    : `Henüz kayıtlı araç bulunmamaktadır.`;
                 vehicleListBody.innerHTML = `
                     <tr>
                         <td colspan="6" class="p-4 text-center text-gray-400 italic">
@@ -197,7 +197,6 @@
         
         // Yerel Depolamaya Tekli Araç Ekleme
         function addVehicle(vehicleData) {
-            
             const newVehicle = {
                 ...vehicleData,
                 id: Date.now().toString(), 
@@ -306,7 +305,6 @@
         async function handleBulkImport() {
             if (!bulkDataInput || !bulkFileInput) return;
             
-            // ... (Dosya ve metin okuma mantığı aynı kalır) ...
             let rawData = '';
 
             if (bulkFileInput.files.length > 0) {
@@ -455,12 +453,8 @@
 
     </script>
 
-    <header class="mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center">
-        <h1 class="text-4xl font-extrabold text-gray-900 mb-2">🚗 Yerel Araç Envanteri Yönetimi</h1>
-        
-        <div class="mb-4 text-sm text-gray-500">
-            <span class="font-mono text-xs p-2 rounded-xl bg-indigo-100 text-indigo-700">Durum: Tamamen Web Tabanlı (Yerel Depolama)</span>
-        </div>
+    <header class="mb-8 flex justify-start items-center">
+        <h1 class="text-4xl font-extrabold text-gray-900">Araç Envanteri</h1>
     </header>
 
     <div id="notificationContainer" class="fixed top-4 right-4 z-50 flex flex-col items-end space-y-2">
