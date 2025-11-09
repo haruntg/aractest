@@ -3,38 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yerel Depolamalı Araç Envanteri Yönetimi</title>
+    <title>Web Tabanlı Yerel Araç Envanteri</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Inter fontu ve temel arkaplan stilini uygula */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* Daha açık ve sade arkaplan */
+            background-color: #f3f4f6; 
         }
         /* Masaüstü görünümünde form ve listenin yan yana olması için stil */
         @media (min-width: 1024px) {
-            /* Form gizlenmediğinde (varsayılan) 1/3 - 2/3 oranında yan yana durur */
             .main-layout:not(.has-hidden-form) {
                 grid-template-columns: 1fr 2fr; 
             }
-            /* Form gizlendiğinde, liste tam ekran (tek kolon) olur */
             .main-layout.has-hidden-form {
                 grid-template-columns: 1fr; 
             }
         }
-        /* Tablo hücrelerinde dikey hizalamayı ayarla */
         .table-cell {
             vertical-align: middle;
         }
-        /* Input focus halkası için özel renk (Tailwind varsayılan) */
         .input-focus:focus {
-            --tw-ring-color: #3b82f6; /* Blue-500 */
+            --tw-ring-color: #3b82f6; 
         }
-        /* Sticky formu desteklemek için body'ye padding eklendi, LG ekranlarda top-10 çalışır */
         @media (min-width: 1024px) {
             .lg-sticky-top {
-                top: 2.5rem; /* lg:top-10 karşılığı */
+                top: 2.5rem; 
             }
         }
     </style>
@@ -46,21 +41,41 @@
         const VEHICLES_KEY = 'corporate_vehicles_inventory'; // localStorage anahtarı
         
         // ************************************************************
-        // UI Elementlerini Yükleme (DOMContentLoaded'de çalışacak)
+        // UI Elementlerini Yükleme ve Global Değişkenler
         // ************************************************************
-        let vehicleForm, vehicleListBody, loadingIndicator, searchInput, userIdDisplay,
-            mainLayout, toggleFormButton, formSection, listSection, plusIcon, minusIcon,
+        let vehicleForm, vehicleListBody, loadingIndicator, searchInput,
+            mainLayout, toggleFormButton, formSection, plusIcon, minusIcon,
             singleEntryTabBtn, bulkImportTabBtn, singleEntryArea, bulkImportArea,
             bulkDataInput, bulkImportButton, bulkFileInput;
 
         let vehiclesData = []; // Uygulamanın ana veri yapısı
+
+        // Elementleri DOM'dan çekme fonksiyonu
+        function getElements() {
+            vehicleForm = document.getElementById('vehicleForm');
+            vehicleListBody = document.getElementById('vehicleListBody');
+            loadingIndicator = document.getElementById('loadingIndicator');
+            searchInput = document.getElementById('searchInput');
+            mainLayout = document.getElementById('mainLayout');
+            toggleFormButton = document.getElementById('toggleFormButton');
+            formSection = document.getElementById('formSection');
+            plusIcon = document.getElementById('plusIcon');
+            minusIcon = document.getElementById('minusIcon');
+            singleEntryTabBtn = document.getElementById('singleEntryTabBtn');
+            bulkImportTabBtn = document.getElementById('bulkImportTabBtn');
+            singleEntryArea = document.getElementById('singleEntryArea');
+            bulkImportArea = document.getElementById('bulkImportArea');
+            bulkDataInput = document.getElementById('bulkDataInput');
+            bulkImportButton = document.getElementById('bulkImportButton');
+            bulkFileInput = document.getElementById('bulkFileInput');
+        }
 
         /**
          * Bildirim Gösterme Fonksiyonu
          */
         function showNotification(message, type = 'success') {
             const container = document.getElementById('notificationContainer');
-            if (!container) return; // Konteyner yoksa çık
+            if (!container) return; 
 
             const color = type === 'success' ? 'bg-green-500' : (type === 'error' ? 'bg-red-500' : 'bg-blue-500');
 
@@ -70,12 +85,10 @@
 
             container.appendChild(notification);
 
-            // Görünür yap
             setTimeout(() => {
                 notification.classList.remove('opacity-0', 'translate-y-4');
             }, 10);
 
-            // Gizle ve kaldır
             setTimeout(() => {
                 notification.classList.add('opacity-0', 'translate-y-4');
                 notification.addEventListener('transitionend', () => notification.remove());
@@ -104,7 +117,7 @@
                 localStorage.setItem(VEHICLES_KEY, JSON.stringify(vehiclesData));
             } catch (error) {
                 console.error("Yerel depolamaya kaydederken hata oluştu:", error);
-                showNotification("Veriler yerel depolamaya kaydedilemedi. Depolama alanı dolu olabilir.", 'error');
+                showNotification("Veriler yerel depolamaya kaydedilemedi.", 'error');
             }
         }
 
@@ -112,7 +125,6 @@
         function isPolicyExpiringSoon(policyDate) {
             const today = new Date();
             today.setHours(0, 0, 0, 0); 
-            // policyDate'in geçerli bir tarih nesnesi olduğundan emin ol
             if (isNaN(policyDate.getTime())) return false; 
             
             const diffTime = policyDate.getTime() - today.getTime();
@@ -125,12 +137,11 @@
             if (!vehicleListBody) return;
             vehicleListBody.innerHTML = ''; 
             
-            // ... (HTML çizim mantığı aynı kalır) ...
             if (vehicles.length === 0) {
                 const searchTerm = searchInput ? searchInput.value.trim() : '';
                 const message = searchTerm 
                     ? `"${searchTerm}" ile eşleşen araç bulunamadı.` 
-                    : `Henüz kayıtlı araç bulunmamaktadır. Yerel depolama kullanılıyor.`;
+                    : `Henüz kayıtlı araç bulunmamaktadır. Veriler yerel depolamada saklanmaktadır.`;
                 vehicleListBody.innerHTML = `
                     <tr>
                         <td colspan="6" class="p-4 text-center text-gray-400 italic">
@@ -173,7 +184,6 @@
                 vehicleListBody.appendChild(row);
             });
             
-            // Delete listener'ları her çizimde yeniden eklenmelidir
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -183,6 +193,68 @@
                     }
                 });
             });
+        }
+        
+        // Yerel Depolamaya Tekli Araç Ekleme
+        function addVehicle(vehicleData) {
+            
+            const newVehicle = {
+                ...vehicleData,
+                id: Date.now().toString(), 
+                createdAt: Date.now() 
+            };
+        
+            vehiclesData.push(newVehicle);
+            vehiclesData.sort((a, b) => b.createdAt - a.createdAt); 
+            saveVehicles();
+            filterAndRenderVehicles();
+
+            showNotification(`'${vehicleData.model}' başarıyla envantere kaydedildi.`, 'success');
+            if(vehicleForm) vehicleForm.reset(); 
+            hideForm();
+        }
+
+        // Yerel Depolamadan Araç Silme
+        function deleteVehicle(id) {
+            const initialLength = vehiclesData.length;
+            vehiclesData = vehiclesData.filter(vehicle => vehicle.id !== id);
+            
+            if (vehiclesData.length < initialLength) {
+                saveVehicles();
+                filterAndRenderVehicles();
+                showNotification("Araç başarıyla envanterden silindi.", 'success');
+            } else {
+                showNotification("Silinecek araç bulunamadı.", 'error');
+            }
+        }
+
+        // Tablar Arasında Geçiş Fonksiyonu
+        function switchTab(target) {
+            if (!singleEntryTabBtn || !bulkImportTabBtn || !singleEntryArea || !bulkImportArea) return;
+
+            const activeClasses = ['border-blue-600', 'text-blue-600'];
+            const inactiveClasses = ['border-transparent', 'text-gray-500'];
+            const hoverClasses = ['hover:text-blue-600', 'hover:border-blue-300'];
+
+            if (target === 'single') {
+                singleEntryArea.classList.remove('hidden');
+                bulkImportArea.classList.add('hidden');
+                
+                singleEntryTabBtn.classList.add(...activeClasses);
+                singleEntryTabBtn.classList.remove(...inactiveClasses, ...hoverClasses);
+                
+                bulkImportTabBtn.classList.remove(...activeClasses);
+                bulkImportTabBtn.classList.add(...inactiveClasses, ...hoverClasses);
+            } else {
+                bulkImportArea.classList.remove('hidden');
+                singleEntryArea.classList.add('hidden');
+
+                bulkImportTabBtn.classList.add(...activeClasses);
+                bulkImportTabBtn.classList.remove(...inactiveClasses, ...hoverClasses);
+                
+                singleEntryTabBtn.classList.remove(...activeClasses);
+                singleEntryTabBtn.classList.add(...inactiveClasses, ...hoverClasses);
+            }
         }
         
         // Formu Gizle Fonksiyonu
@@ -206,14 +278,37 @@
             plusIcon.classList.add('hidden');
             minusIcon.classList.remove('hidden');
         }
+        
+        // Filtreleme ve Çizme Fonksiyonu
+        function filterAndRenderVehicles() {
+            if (!searchInput) return;
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            
+            if (!searchTerm) {
+                renderVehicles(vehiclesData); 
+                return;
+            }
+
+            const filtered = vehiclesData.filter(vehicle => {
+                const policyEndString = vehicle.policyEnd || ''; 
+
+                return vehicle.model.toLowerCase().includes(searchTerm) ||
+                       vehicle.plate.toLowerCase().includes(searchTerm) ||
+                       vehicle.driver.toLowerCase().includes(searchTerm) ||
+                       vehicle.unit.toLowerCase().includes(searchTerm) ||
+                       policyEndString.toLowerCase().includes(searchTerm); 
+            });
+
+            renderVehicles(filtered);
+        }
 
         // Toplu İçe Aktarımı Yönetme Fonksiyonu
         async function handleBulkImport() {
             if (!bulkDataInput || !bulkFileInput) return;
             
+            // ... (Dosya ve metin okuma mantığı aynı kalır) ...
             let rawData = '';
 
-            // Dosya veya Textarea'dan veri al
             if (bulkFileInput.files.length > 0) {
                 const file = bulkFileInput.files[0];
                 if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv' && file.type !== 'application/vnd.ms-excel') {
@@ -241,7 +336,6 @@
                 return;
             }
 
-            // ... (İşleme mantığı aynı kalır) ...
             const lines = rawData.split('\n').filter(line => line.trim() !== '');
             let successCount = 0;
             let failedCount = 0;
@@ -279,7 +373,6 @@
                     driver,
                     unit,
                     policyEnd: policyEnd, 
-                    // Her satır için benzersiz ID sağlamak için i ekle
                     id: (baseTimestamp + i).toString(), 
                     createdAt: baseTimestamp + i 
                 });
@@ -311,39 +404,36 @@
             hideForm();
         }
 
+        // Form Gönderimini Yönetme (Tekli Giriş)
+        function handleSingleEntrySubmit(e) {
+            e.preventDefault();
+            
+            const model = document.getElementById('model').value.trim();
+            const plate = document.getElementById('plate').value.trim();
+            const driver = document.getElementById('driver').value.trim();
+            const unit = document.getElementById('unit').value.trim();
+            const policyEnd = document.getElementById('policyEnd').value.trim(); 
+
+            if (!model || !plate || !driver || !unit || !policyEnd) {
+                showNotification("Lütfen tüm alanları doldurun.", 'error');
+                return;
+            }
+            
+            if (isNaN(new Date(policyEnd))) {
+                showNotification("Geçersiz Poliçe Bitiş Tarihi.", 'error');
+                return;
+            }
+
+            const vehicleData = { model, plate, driver, unit, policyEnd };
+            
+            addVehicle(vehicleData);
+        }
 
         // Uygulama Başlatma Fonksiyonu
         function initApp() {
-            // UI Elementlerini Yükle
-            vehicleForm = document.getElementById('vehicleForm');
-            vehicleListBody = document.getElementById('vehicleListBody');
-            loadingIndicator = document.getElementById('loadingIndicator');
-            searchInput = document.getElementById('searchInput');
-            userIdDisplay = document.getElementById('userIdDisplay'); 
-            mainLayout = document.getElementById('mainLayout');
-            toggleFormButton = document.getElementById('toggleFormButton');
-            formSection = document.getElementById('formSection');
-            listSection = document.getElementById('listSection');
-            plusIcon = document.getElementById('plusIcon');
-            minusIcon = document.getElementById('minusIcon');
-            singleEntryTabBtn = document.getElementById('singleEntryTabBtn');
-            bulkImportTabBtn = document.getElementById('bulkImportTabBtn');
-            singleEntryArea = document.getElementById('singleEntryArea');
-            bulkImportArea = document.getElementById('bulkImportArea');
-            bulkDataInput = document.getElementById('bulkDataInput');
-            bulkImportButton = document.getElementById('bulkImportButton');
-            bulkFileInput = document.getElementById('bulkFileInput');
-
+            getElements();
             
-            // Bağlantı durumunu güncelle
-            if (userIdDisplay) {
-                userIdDisplay.textContent = "Bağlantı: Yerel Depolama (localStorage)";
-                userIdDisplay.classList.remove('text-gray-500', 'bg-gray-100');
-                userIdDisplay.classList.add('text-indigo-700', 'bg-indigo-100');
-            }
-
-
-            // Olay dinleyicilerini ayarla (Tüm elementlerin varlığını kontrol et)
+            // Olay dinleyicilerini ayarla
             if (toggleFormButton) toggleFormButton.addEventListener('click', () => {
                 const isHidden = formSection.classList.contains('hidden');
                 if (isHidden) { showForm(); } else { hideForm(); }
@@ -354,15 +444,13 @@
             if (bulkImportButton) bulkImportButton.addEventListener('click', handleBulkImport);
             if (searchInput) searchInput.addEventListener('input', filterAndRenderVehicles);
             
-            // Verileri yükle
+            // Verileri yükle ve görünümü ayarla
             loadVehicles();
-
-            // Başlangıçta formu gizle ve tekli girişi seç
             hideForm();
             switchTab('single'); 
         }
 
-        // DOM içeriği yüklendiğinde başlat (resimlerin yüklenmesini beklemez, daha hızlıdır)
+        // DOM içeriği yüklendiğinde başlat
         document.addEventListener('DOMContentLoaded', initApp);
 
     </script>
@@ -371,7 +459,7 @@
         <h1 class="text-4xl font-extrabold text-gray-900 mb-2">🚗 Yerel Araç Envanteri Yönetimi</h1>
         
         <div class="mb-4 text-sm text-gray-500">
-            <span id="userIdDisplay" class="font-mono text-xs p-2 rounded-xl bg-gray-100 transition duration-300">Durum: Yerel Depolama (localStorage)</span>
+            <span class="font-mono text-xs p-2 rounded-xl bg-indigo-100 text-indigo-700">Durum: Tamamen Web Tabanlı (Yerel Depolama)</span>
         </div>
     </header>
 
@@ -395,22 +483,18 @@
                         <label for="model" class="block text-sm font-medium text-gray-700 mb-1">Araç Modeli <span class="text-red-500">*</span></label>
                         <input type="text" id="model" name="model" required class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20" placeholder="Örn: Ford Focus">
                     </div>
-
                     <div>
                         <label for="plate" class="block text-sm font-medium text-gray-700 mb-1">Plaka <span class="text-red-500">*</span></label>
                         <input type="text" id="plate" name="plate" required class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20" placeholder="Örn: 34 ABC 123">
                     </div>
-
                     <div>
                         <label for="driver" class="block text-sm font-medium text-gray-700 mb-1">Kullanan Kişi <span class="text-red-500">*</span></label>
                         <input type="text" id="driver" name="driver" required class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20" placeholder="Örn: Ali Yılmaz">
                     </div>
-
                     <div>
                         <label for="unit" class="block text-sm font-medium text-gray-700 mb-1">Birim (Departman) <span class="text-red-500">*</span></label>
                         <input type="text" id="unit" name="unit" required class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20" placeholder="Örn: Satış, Muhasebe">
                     </div>
-
                     <div>
                         <label for="policyEnd" class="block text-sm font-medium text-gray-700 mb-1">Poliçe Bitiş Tarihi <span class="text-red-500">*</span></label>
                         <input type="date" id="policyEnd" name="policyEnd" required class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20">
