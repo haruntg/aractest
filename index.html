@@ -46,7 +46,7 @@
         let vehicleForm, vehicleListBody, loadingIndicator, searchInput,
             mainLayout, toggleFormButton, formSection, plusIcon, minusIcon,
             singleEntryTabBtn, bulkImportTabBtn, singleEntryArea, bulkImportArea,
-            bulkDataInput, bulkImportButton, bulkFileInput, totalCountDisplay; // Yeni değişken
+            bulkDataInput, bulkImportButton, bulkFileInput, totalCountDisplay; 
             
         let vehiclesData = []; 
 
@@ -68,7 +68,7 @@
             bulkDataInput = document.getElementById('bulkDataInput');
             bulkImportButton = document.getElementById('bulkImportButton');
             bulkFileInput = document.getElementById('bulkFileInput');
-            totalCountDisplay = document.getElementById('totalCountDisplay'); // Yeni element çekildi
+            totalCountDisplay = document.getElementById('totalCountDisplay'); 
         }
 
         /**
@@ -133,18 +133,16 @@
             return diffDays > 0 && diffDays <= 90; 
         }
         
-        // ************************************************
-        // Yeni: Toplam Sayıyı Güncelleme Fonksiyonu
-        // ************************************************
+        // Toplam Sayıyı Güncelleme Fonksiyonu (Daha yumuşak bir görünüm için metin güncellendi)
         function updateTotalCount(totalCount, filteredCount) {
             if (!totalCountDisplay) return;
 
             if (totalCount === filteredCount) {
                 // Filtreleme yapılmamışsa sadece toplamı göster
-                totalCountDisplay.innerHTML = `<span class="text-gray-500 font-semibold text-sm">Toplam Kayıt: </span><span class="text-indigo-600 font-extrabold text-xl">${totalCount}</span>`;
+                totalCountDisplay.innerHTML = `<span class="font-semibold text-gray-700">Toplam: </span><span class="font-bold text-lg text-indigo-700">${totalCount} Araç</span>`;
             } else {
                 // Filtreleme yapılmışsa, filtreleneni ve toplamı göster
-                 totalCountDisplay.innerHTML = `<span class="text-gray-500 font-semibold text-sm">Toplam Kayıt: </span><span class="text-indigo-600 font-extrabold text-xl">${totalCount}</span><span class="text-gray-400 text-sm ml-4">(Filtrelenen: ${filteredCount})</span>`;
+                 totalCountDisplay.innerHTML = `<span class="font-bold text-lg text-indigo-700">${filteredCount} / ${totalCount} Araç </span><span class="text-gray-500 text-sm">(Filtrelenmiş)</span>`;
             }
         }
 
@@ -154,9 +152,7 @@
             if (!vehicleListBody) return;
             vehicleListBody.innerHTML = ''; 
             
-            // ************************************************
             // Sayacın Güncellenmesi
-            // ************************************************
             updateTotalCount(vehiclesData.length, vehicles.length);
 
             if (vehicles.length === 0) {
@@ -229,7 +225,6 @@
             vehiclesData.sort((a, b) => b.createdAt - a.createdAt); 
             saveVehicles();
             filterAndRenderVehicles();
-            // Sayım burada otomatik güncellenecek
 
             showNotification(`'${vehicleData.model}' başarıyla envantere kaydedildi.`, 'success');
             if(vehicleForm) vehicleForm.reset(); 
@@ -244,7 +239,6 @@
             if (vehiclesData.length < initialLength) {
                 saveVehicles();
                 filterAndRenderVehicles();
-                // Sayım burada otomatik güncellenecek
                 showNotification("Araç başarıyla envanterden silindi.", 'success');
             } else {
                 showNotification("Silinecek araç bulunamadı.", 'error');
@@ -405,7 +399,6 @@
             vehiclesData.sort((a, b) => b.createdAt - a.createdAt);
             saveVehicles();
             filterAndRenderVehicles();
-            // Sayım burada otomatik güncellenecek
 
             let summaryMessage = `İçe aktarma tamamlandı. ${successCount} araç başarıyla eklendi.`;
             let summaryType = 'success';
@@ -478,7 +471,7 @@
     </script>
 
     <header class="mb-4">
-        </header>
+    </header>
 
     <div id="notificationContainer" class="fixed top-4 right-4 z-50 flex flex-col items-end space-y-2">
         </div>
@@ -566,13 +559,12 @@
                 </button>
             </div>
             
-            <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 space-y-4 lg:space-y-0">
-                <input type="text" id="searchInput" placeholder="Model, plaka, sürücü, birim veya poliçe bitiş tarihine göre ara..." class="input-focus w-full lg:w-3/5 px-4 py-3 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20">
-                
-                <div id="totalCountDisplay" class="bg-indigo-50 p-3 rounded-xl text-right w-full lg:w-auto shadow-inner border border-indigo-100">
-                    </div>
+            <div class="mb-4">
+                <input type="text" id="searchInput" placeholder="Model, plaka, sürücü, birim veya poliçe bitiş tarihine göre ara..." class="input-focus w-full px-4 py-3 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20">
             </div>
 
+            <div id="totalCountDisplay" class="bg-gray-100 p-3 mb-4 rounded-lg text-left shadow-inner border border-gray-200">
+                </div>
 
             <div id="loadingIndicator" class="text-center py-12 text-blue-500 font-semibold text-lg">
                 Veriler Yerel Depolamadan Yükleniyor...
