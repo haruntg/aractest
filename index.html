@@ -47,10 +47,11 @@
             mainLayout, toggleFormButton, formSection, plusIcon, minusIcon,
             singleEntryTabBtn, bulkImportTabBtn, singleEntryArea, bulkImportArea,
             bulkDataInput, bulkImportButton, bulkFileInput, totalCountDisplay,
-            deleteAllButton, formTitle, submitButton, cancelButton; // Yeni form elementleri
+            deleteAllButton, formTitle, submitButton, cancelButton,
+            exportDataButton; // Yeni buton değişkeni
             
         let vehiclesData = []; 
-        let currentEditingId = null; // Düzenlenen aracın ID'sini tutar
+        let currentEditingId = null; 
 
         // Elementleri DOM'dan çekme fonksiyonu
         function getElements() {
@@ -72,9 +73,10 @@
             bulkFileInput = document.getElementById('bulkFileInput');
             totalCountDisplay = document.getElementById('totalCountDisplay'); 
             deleteAllButton = document.getElementById('deleteAllButton'); 
-            formTitle = document.getElementById('formTitle'); // Yeni
-            submitButton = document.getElementById('submitButton'); // Yeni
-            cancelButton = document.getElementById('cancelButton'); // Yeni
+            formTitle = document.getElementById('formTitle'); 
+            submitButton = document.getElementById('submitButton'); 
+            cancelButton = document.getElementById('cancelButton');
+            exportDataButton = document.getElementById('exportDataButton'); // Yeni butonu çek
         }
 
         /**
@@ -147,6 +149,58 @@
                 showNotification("Silme işlemi iptal edildi.", 'info');
             }
         }
+        
+        // ************************************************
+        // Yeni Fonksiyon: Veri Dışa Aktarma (Export)
+        // ************************************************
+        function exportData(format) {
+            if (vehiclesData.length === 0) {
+                showNotification("Dışa aktarılacak veri bulunmamaktadır.", 'error');
+                return;
+            }
+
+            let data, filename, mimeType;
+            
+            // CSV için başlık satırı
+            const headers = ["model", "plate", "driver", "unit", "policyEnd", "createdAt", "id"];
+            const headerRow = headers.join(',');
+
+            if (format === 'csv') {
+                const csvRows = vehiclesData.map(vehicle => 
+                    headers.map(fieldName => {
+                        // Virgüllü veriler için tırnak işareti ekle
+                        const value = vehicle[fieldName] ? vehicle[fieldName].toString().replace(/"/g, '""') : '';
+                        return `"${value}"`; 
+                    }).join(',')
+                );
+                
+                data = headerRow + '\n' + csvRows.join('\n');
+                filename = `arac_envanter_yedek_${new Date().toISOString().slice(0, 10)}.csv`;
+                mimeType = 'text/csv';
+            } else if (format === 'json') {
+                data = JSON.stringify(vehiclesData, null, 2); 
+                filename = `arac_envanter_yedek_${new Date().toISOString().slice(0, 10)}.json`;
+                mimeType = 'application/json';
+            } else {
+                showNotification("Geçersiz dışa aktarma formatı.", 'error');
+                return;
+            }
+
+            // İndirme işlemini başlat
+            const blob = new Blob([data], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url); 
+
+            showNotification(`${format.toUpperCase()} yedeği başarıyla indirildi.`, 'success');
+        }
+
 
         // Poliçe Bitişinin Yakın Olup Olmadığını Kontrol Et (90 günden az kaldıysa)
         function isPolicyExpiringSoon(policyDate) {
@@ -172,9 +226,7 @@
             }
         }
 
-        // ************************************************
-        // Yeni Fonksiyon: Araç Düzenleme Modunu Başlatma
-        // ************************************************
+        // Araç Düzenleme Modunu Başlatma
         function editVehicle(id) {
             const vehicleToEdit = vehiclesData.find(v => v.id === id);
             if (!vehicleToEdit) {
@@ -182,21 +234,16 @@
                 return;
             }
 
-            // Düzenleme modunu aç
             currentEditingId = id;
             showForm(); 
-            switchTab('single'); // Tekli giriş sekmesine geç
+            switchTab('single'); 
 
-            // Formu doldur
             document.getElementById('model').value = vehicleToEdit.model;
             document.getElementById('plate').value = vehicleToEdit.plate;
             document.getElementById('driver').value = vehicleToEdit.driver;
             document.getElementById('unit').value = vehicleToEdit.unit;
-            
-            // Tarih alanını YYYY-MM-DD formatına çevir
             document.getElementById('policyEnd').value = vehicleToEdit.policyEnd; 
 
-            // Form başlık ve butonları güncelle
             formTitle.textContent = "Araç Bilgilerini Düzenle";
             submitButton.textContent = "Güncellemeyi Kaydet";
             submitButton.classList.remove('bg-green-500', 'hover:bg-green-600');
@@ -206,21 +253,16 @@
             showNotification(`'${vehicleToEdit.model}' için düzenleme modu aktif.`, 'info');
         }
         
-        // ************************************************
-        // Yeni Fonksiyon: Düzenleme Modundan Çıkma
-        // ************************************************
+        // Düzenleme Modundan Çıkma
         function exitEditMode() {
             currentEditingId = null;
             vehicleForm.reset();
             
-            // Form başlık ve butonları varsayılana döndür
             formTitle.textContent = "Yeni Araç Kaydı";
             submitButton.textContent = "Aracı Envantere Kaydet";
             submitButton.classList.remove('bg-orange-500', 'hover:bg-orange-600');
             submitButton.classList.add('bg-green-500', 'hover:bg-green-600');
             cancelButton.classList.add('hidden');
-            
-            // İsteğe bağlı: Düzenleme sonrası formu kapatabiliriz (şimdilik açık kalsın)
         }
 
         // Araç Listesini HTML'e Çizme Fonksiyonu
@@ -228,15 +270,15 @@
             if (!vehicleListBody) return;
             vehicleListBody.innerHTML = ''; 
             
-            // Sayacın Güncellenmesi
             updateTotalCount(vehiclesData.length, vehicles.length);
             
-            // Silme butonunun görünürlüğünü ayarla
             if (deleteAllButton) {
                  if (vehiclesData.length > 0) {
                     deleteAllButton.classList.remove('hidden');
+                    exportDataButton.classList.remove('hidden'); // Export butonunu göster
                 } else {
                     deleteAllButton.classList.add('hidden');
+                    exportDataButton.classList.add('hidden'); // Export butonunu gizle
                 }
             }
 
@@ -301,7 +343,6 @@
                 });
             });
             
-            // Yeni: Düzenleme butonları için olay dinleyicisi
             document.querySelectorAll('.edit-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -311,14 +352,11 @@
             });
         }
         
-        // ************************************************
-        // Yeni Fonksiyon: Araç Güncelleme
-        // ************************************************
+        // Araç Güncelleme
         function updateVehicle(id, vehicleData) {
             const index = vehiclesData.findIndex(v => v.id === id);
             
             if (index !== -1) {
-                // Sadece güncellenebilir alanları koru, ancak createdAt zaman damgasını koru
                 vehiclesData[index] = {
                     ...vehiclesData[index], 
                     ...vehicleData 
@@ -370,7 +408,6 @@
         function switchTab(target) {
             if (!singleEntryTabBtn || !bulkImportTabBtn || !singleEntryArea || !bulkImportArea) return;
 
-            // Eğer düzenleme modundaysak, toplu sekme geçişini engelle
             if (currentEditingId && target === 'bulk') {
                 showNotification("Düzenleme modundayken Toplu Ekleme sekmesine geçilemez. Lütfen önce iptal edin.", 'info');
                 return;
@@ -411,7 +448,6 @@
             plusIcon.classList.remove('hidden');
             minusIcon.classList.add('hidden');
             
-            // Gizlerken düzenleme modundan da çık
             if (currentEditingId) {
                 exitEditMode();
             }
@@ -455,7 +491,6 @@
         async function handleBulkImport() {
             if (!bulkDataInput || !bulkFileInput) return;
             
-            // Eğer düzenleme modundaysak, bu işlemi engelle
             if (currentEditingId) {
                 showNotification("Lütfen önce düzenleme modundan çıkın.", 'error');
                 return;
@@ -580,14 +615,12 @@
             const vehicleData = { model, plate, driver, unit, policyEnd };
             
             if (currentEditingId) {
-                // Düzenleme Modu
                 updateVehicle(currentEditingId, vehicleData);
             } else {
-                // Yeni Kayıt Modu
                 addVehicle(vehicleData);
             }
         }
-
+        
         // Uygulama Başlatma Fonksiyonu
         function initApp() {
             getElements();
@@ -609,6 +642,19 @@
                 hideForm(); 
                 showNotification("Düzenleme iptal edildi.", 'info');
             });
+            
+            // Yeni: Export Butonu Olay Dinleyicisi
+            if (exportDataButton) {
+                exportDataButton.addEventListener('click', () => {
+                    // Kullanıcıya format seçeneği sunmak için basit bir prompt kullanabiliriz.
+                    const format = prompt("Hangi formatta dışa aktarmak istersiniz? (csv veya json)", "csv");
+                    if (format && (format.toLowerCase() === 'csv' || format.toLowerCase() === 'json')) {
+                        exportData(format.toLowerCase());
+                    } else if (format !== null) {
+                        showNotification("Geçersiz format seçimi. Lütfen 'csv' veya 'json' girin.", 'error');
+                    }
+                });
+            }
             
             // Verileri yükle ve görünümü ayarla
             loadVehicles();
@@ -744,7 +790,12 @@
                 </table>
             </div>
             
-            <div class="flex justify-end pt-4 border-t border-gray-100">
+            <div class="flex justify-between items-center pt-4 border-t border-gray-100">
+                <button id="exportDataButton" class="hidden bg-indigo-100 hover:bg-indigo-500 text-indigo-700 hover:text-white font-bold py-2 px-4 rounded-xl transition duration-300 shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-300 focus:ring-opacity-50 text-sm flex items-center space-x-2" title="Tüm veriyi yedeklemek için dışa aktarır">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <span>Veriyi İndir</span>
+                </button>
+                
                 <button id="deleteAllButton" class="hidden bg-red-100 hover:bg-red-500 text-red-700 hover:text-white font-bold py-2 px-4 rounded-xl transition duration-300 shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-300 focus:ring-opacity-50 text-sm flex items-center space-x-2" title="Tüm araç kayıtlarını siler">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     <span>Tüm Listeyi Sil</span>
