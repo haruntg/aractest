@@ -47,9 +47,10 @@
             mainLayout, toggleFormButton, formSection, plusIcon, minusIcon,
             singleEntryTabBtn, bulkImportTabBtn, singleEntryArea, bulkImportArea,
             bulkDataInput, bulkImportButton, bulkFileInput, totalCountDisplay,
-            deleteAllButton; // Yeni buton değişkeni
+            deleteAllButton, formTitle, submitButton, cancelButton; // Yeni form elementleri
             
         let vehiclesData = []; 
+        let currentEditingId = null; // Düzenlenen aracın ID'sini tutar
 
         // Elementleri DOM'dan çekme fonksiyonu
         function getElements() {
@@ -70,7 +71,10 @@
             bulkImportButton = document.getElementById('bulkImportButton');
             bulkFileInput = document.getElementById('bulkFileInput');
             totalCountDisplay = document.getElementById('totalCountDisplay'); 
-            deleteAllButton = document.getElementById('deleteAllButton'); // Yeni butonu çek
+            deleteAllButton = document.getElementById('deleteAllButton'); 
+            formTitle = document.getElementById('formTitle'); // Yeni
+            submitButton = document.getElementById('submitButton'); // Yeni
+            cancelButton = document.getElementById('cancelButton'); // Yeni
         }
 
         /**
@@ -80,7 +84,7 @@
             const container = document.getElementById('notificationContainer');
             if (!container) return; 
 
-            const color = type === 'success' ? 'bg-green-500' : (type === 'error' ? 'bg-red-500' : 'bg-blue-500');
+            const color = type === 'success' ? 'bg-green-500' : (type === 'error' ? 'bg-red-500' : (type === 'info' ? 'bg-blue-500' : 'bg-gray-500'));
 
             const notification = document.createElement('div');
             notification.className = `${color} text-white px-4 py-3 rounded-xl shadow-lg mb-2 opacity-0 transform transition-all duration-300 translate-y-4 max-w-sm`;
@@ -124,9 +128,7 @@
             }
         }
         
-        // ************************************************
-        // Yeni Fonksiyon: Tüm Listeyi Silme
-        // ************************************************
+        // Tüm Listeyi Silme Fonksiyonu
         function deleteAllVehicles() {
             if (vehiclesData.length === 0) {
                 showNotification("Silinecek araç kaydı bulunmamaktadır.", 'error');
@@ -140,7 +142,6 @@
                 localStorage.removeItem(VEHICLES_KEY); 
                 filterAndRenderVehicles();
                 showNotification("Tüm araç kayıtları başarıyla silindi. Envanter sıfırlandı.", 'success');
-                // Silme işleminden sonra formu gizle (isteğe bağlı)
                 hideForm(); 
             } else {
                 showNotification("Silme işlemi iptal edildi.", 'info');
@@ -171,6 +172,56 @@
             }
         }
 
+        // ************************************************
+        // Yeni Fonksiyon: Araç Düzenleme Modunu Başlatma
+        // ************************************************
+        function editVehicle(id) {
+            const vehicleToEdit = vehiclesData.find(v => v.id === id);
+            if (!vehicleToEdit) {
+                showNotification("Düzenlenecek araç bulunamadı.", 'error');
+                return;
+            }
+
+            // Düzenleme modunu aç
+            currentEditingId = id;
+            showForm(); 
+            switchTab('single'); // Tekli giriş sekmesine geç
+
+            // Formu doldur
+            document.getElementById('model').value = vehicleToEdit.model;
+            document.getElementById('plate').value = vehicleToEdit.plate;
+            document.getElementById('driver').value = vehicleToEdit.driver;
+            document.getElementById('unit').value = vehicleToEdit.unit;
+            
+            // Tarih alanını YYYY-MM-DD formatına çevir
+            document.getElementById('policyEnd').value = vehicleToEdit.policyEnd; 
+
+            // Form başlık ve butonları güncelle
+            formTitle.textContent = "Araç Bilgilerini Düzenle";
+            submitButton.textContent = "Güncellemeyi Kaydet";
+            submitButton.classList.remove('bg-green-500', 'hover:bg-green-600');
+            submitButton.classList.add('bg-orange-500', 'hover:bg-orange-600');
+            cancelButton.classList.remove('hidden'); 
+            
+            showNotification(`'${vehicleToEdit.model}' için düzenleme modu aktif.`, 'info');
+        }
+        
+        // ************************************************
+        // Yeni Fonksiyon: Düzenleme Modundan Çıkma
+        // ************************************************
+        function exitEditMode() {
+            currentEditingId = null;
+            vehicleForm.reset();
+            
+            // Form başlık ve butonları varsayılana döndür
+            formTitle.textContent = "Yeni Araç Kaydı";
+            submitButton.textContent = "Aracı Envantere Kaydet";
+            submitButton.classList.remove('bg-orange-500', 'hover:bg-orange-600');
+            submitButton.classList.add('bg-green-500', 'hover:bg-green-600');
+            cancelButton.classList.add('hidden');
+            
+            // İsteğe bağlı: Düzenleme sonrası formu kapatabiliriz (şimdilik açık kalsın)
+        }
 
         // Araç Listesini HTML'e Çizme Fonksiyonu
         function renderVehicles(vehicles) {
@@ -228,7 +279,10 @@
                             ${expiringSoon ? ' (YAKINDA BİTİYOR)' : ''}
                         </span>
                     </td>
-                    <td class="px-2 py-3 sm:p-4 table-cell text-right">
+                    <td class="px-2 py-3 sm:p-4 table-cell text-right space-x-2 whitespace-nowrap">
+                        <button data-id="${vehicle.id}" class="edit-btn text-blue-600 hover:text-white bg-blue-100 hover:bg-blue-500 p-2 rounded-full transition duration-200 shadow-md" title="Aracı Düzenle">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        </button>
                         <button data-id="${vehicle.id}" class="delete-btn text-red-600 hover:text-white bg-red-100 hover:bg-red-500 p-2 rounded-full transition duration-200 shadow-md" title="Aracı Sil">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
@@ -246,6 +300,38 @@
                     }
                 });
             });
+            
+            // Yeni: Düzenleme butonları için olay dinleyicisi
+            document.querySelectorAll('.edit-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const id = e.currentTarget.dataset.id;
+                    editVehicle(id);
+                });
+            });
+        }
+        
+        // ************************************************
+        // Yeni Fonksiyon: Araç Güncelleme
+        // ************************************************
+        function updateVehicle(id, vehicleData) {
+            const index = vehiclesData.findIndex(v => v.id === id);
+            
+            if (index !== -1) {
+                // Sadece güncellenebilir alanları koru, ancak createdAt zaman damgasını koru
+                vehiclesData[index] = {
+                    ...vehiclesData[index], 
+                    ...vehicleData 
+                };
+                
+                saveVehicles();
+                filterAndRenderVehicles();
+                showNotification(`'${vehicleData.model}' başarıyla güncellendi.`, 'success');
+                exitEditMode(); 
+                hideForm();
+            } else {
+                 showNotification("Güncellenecek araç kaydı bulunamadı.", 'error');
+            }
         }
         
         // Yerel Depolamaya Tekli Araç Ekleme
@@ -284,6 +370,12 @@
         function switchTab(target) {
             if (!singleEntryTabBtn || !bulkImportTabBtn || !singleEntryArea || !bulkImportArea) return;
 
+            // Eğer düzenleme modundaysak, toplu sekme geçişini engelle
+            if (currentEditingId && target === 'bulk') {
+                showNotification("Düzenleme modundayken Toplu Ekleme sekmesine geçilemez. Lütfen önce iptal edin.", 'info');
+                return;
+            }
+
             const activeClasses = ['border-blue-600', 'text-blue-600'];
             const inactiveClasses = ['border-transparent', 'text-gray-500'];
             const hoverClasses = ['hover:text-blue-600', 'hover:border-blue-300'];
@@ -305,11 +397,11 @@
                 bulkImportTabBtn.classList.remove(...inactiveClasses, ...hoverClasses);
                 
                 singleEntryTabBtn.classList.remove(...activeClasses);
-                singleEntryTabBtn.classList.add(...inactiveClasses, ...hoverClasses);
+                bulkImportTabBtn.classList.add(...inactiveClasses, ...hoverClasses);
             }
         }
         
-        // Formu Gizle Fonksiyonu
+        // Formu Gizle Fonksiyonu (ve düzenleme modundan çıkma)
         function hideForm() {
             if (!formSection || !mainLayout || !toggleFormButton || !plusIcon || !minusIcon) return;
             formSection.classList.add('hidden');
@@ -318,6 +410,11 @@
             toggleFormButton.classList.add('bg-blue-500', 'hover:bg-blue-600', 'focus:ring-blue-300');
             plusIcon.classList.remove('hidden');
             minusIcon.classList.add('hidden');
+            
+            // Gizlerken düzenleme modundan da çık
+            if (currentEditingId) {
+                exitEditMode();
+            }
         }
 
         // Formu Göster Fonksiyonu
@@ -354,9 +451,15 @@
             renderVehicles(filtered);
         }
 
-        // Toplu İçe Aktarımı Yönetme Fonksiyonu
+        // Toplu İçe Aktarımı Yönetme Fonksiyonu (Değişiklik Yok)
         async function handleBulkImport() {
             if (!bulkDataInput || !bulkFileInput) return;
+            
+            // Eğer düzenleme modundaysak, bu işlemi engelle
+            if (currentEditingId) {
+                showNotification("Lütfen önce düzenleme modundan çıkın.", 'error');
+                return;
+            }
             
             let rawData = '';
 
@@ -454,7 +557,7 @@
             hideForm();
         }
 
-        // Form Gönderimini Yönetme (Tekli Giriş)
+        // Form Gönderimini Yönetme (Tekli Giriş / Güncelleme)
         function handleSingleEntrySubmit(e) {
             e.preventDefault();
             
@@ -476,7 +579,13 @@
 
             const vehicleData = { model, plate, driver, unit, policyEnd };
             
-            addVehicle(vehicleData);
+            if (currentEditingId) {
+                // Düzenleme Modu
+                updateVehicle(currentEditingId, vehicleData);
+            } else {
+                // Yeni Kayıt Modu
+                addVehicle(vehicleData);
+            }
         }
 
         // Uygulama Başlatma Fonksiyonu
@@ -493,9 +602,13 @@
             if (bulkImportTabBtn) bulkImportTabBtn.addEventListener('click', () => switchTab('bulk'));
             if (bulkImportButton) bulkImportButton.addEventListener('click', handleBulkImport);
             if (searchInput) searchInput.addEventListener('input', filterAndRenderVehicles);
-            
-            // Yeni Silme Butonu Olayı
             if (deleteAllButton) deleteAllButton.addEventListener('click', deleteAllVehicles);
+            if (cancelButton) cancelButton.addEventListener('click', (e) => { 
+                e.preventDefault();
+                exitEditMode(); 
+                hideForm(); 
+                showNotification("Düzenleme iptal edildi.", 'info');
+            });
             
             // Verileri yükle ve görünümü ayarla
             loadVehicles();
@@ -517,7 +630,7 @@
     <main id="mainLayout" class="grid grid-cols-1 gap-8 main-layout">
         
         <section id="formSection" class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 lg:sticky lg-sticky-top h-min transition-all duration-300 ease-in-out">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3 text-blue-600">Yeni Araç Kaydı</h2>
+            <h2 id="formTitle" class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3 text-blue-600">Yeni Araç Kaydı</h2>
 
             <div class="flex mb-6 border-b border-gray-200">
                 <button id="singleEntryTabBtn" class="py-2 px-4 text-sm font-semibold border-b-2 transition duration-150 focus:outline-none">Tekli Giriş</button>
@@ -548,9 +661,14 @@
                         <input type="date" id="policyEnd" name="policyEnd" required class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20">
                     </div>
 
-                    <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition duration-300 shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-green-300 focus:ring-opacity-50 mt-6">
-                        Aracı Envantere Kaydet
-                    </button>
+                    <div class="flex space-x-4 pt-6">
+                        <button id="cancelButton" type="button" class="hidden w-1/3 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 rounded-xl transition duration-300 shadow-lg focus:outline-none focus:ring-4 focus:ring-gray-300 focus:ring-opacity-50">
+                            İptal
+                        </button>
+                        <button id="submitButton" type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition duration-300 shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-green-300 focus:ring-opacity-50">
+                            Aracı Envantere Kaydet
+                        </button>
+                    </div>
                 </form>
             </div>
 
