@@ -39,6 +39,14 @@
     <script>
         // Sabitler
         const VEHICLES_KEY = 'corporate_vehicles_inventory'; 
+        // Yeni sabit: Araç Tipleri
+        const VEHICLE_TYPES = {
+            "Otomobil": "Otomobil (Sedan/Hatchback)",
+            "Kamyonet": "Kamyonet",
+            "Ticari": "Ticari Van/Minibüs",
+            "Ağır Vasıta": "Ağır Vasıta (Kamyon/TIR)",
+            "Diğer": "Diğer"
+        };
         
         // ************************************************************
         // UI Elementlerini Yükleme ve Global Değişkenler
@@ -77,6 +85,17 @@
             submitButton = document.getElementById('submitButton'); 
             cancelButton = document.getElementById('cancelButton');
             exportDataButton = document.getElementById('exportDataButton'); 
+            
+            // Yeni: Type alanını doldur
+            const typeSelect = document.getElementById('type');
+            if (typeSelect) {
+                Object.keys(VEHICLE_TYPES).forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = VEHICLE_TYPES[key];
+                    typeSelect.appendChild(option);
+                });
+            }
         }
 
         /**
@@ -109,6 +128,13 @@
             try {
                 const storedVehicles = localStorage.getItem(VEHICLES_KEY);
                 vehiclesData = storedVehicles ? JSON.parse(storedVehicles) : [];
+                
+                // Eski verilere 'type' alanı ekle
+                vehiclesData = vehiclesData.map(v => ({
+                    type: v.type || "Otomobil", // Eğer 'type' yoksa varsayılan 'Otomobil' ata
+                    ...v
+                }));
+
             } catch (error) {
                 console.error("Yerel depolamadan yüklenirken hata oluştu:", error);
                 showNotification("Veriler yüklenemedi. Tarayıcınızda 'localStorage' devre dışı olabilir.", 'error');
@@ -150,7 +176,7 @@
             }
         }
         
-        // Veri Dışa Aktarma (Export)
+        // Veri Dışa Aktarma (Export) - 8 ALAN OLARAK GÜNCELLENDİ
         function exportData(format) {
             if (vehiclesData.length === 0) {
                 showNotification("Dışa aktarılacak veri bulunmamaktadır.", 'error');
@@ -159,8 +185,8 @@
 
             let data, filename, mimeType;
             
-            // CSV için başlık satırı (Tüm alanlar: 5 manuel + 2 otomatik)
-            const headers = ["model", "plate", "driver", "unit", "policyEnd", "createdAt", "id"];
+            // CSV için başlık satırı (6 manuel + 2 otomatik = 8 alan)
+            const headers = ["type", "model", "plate", "driver", "unit", "policyEnd", "createdAt", "id"];
             const headerRow = headers.join(',');
 
             if (format === 'csv') {
@@ -172,7 +198,6 @@
                     }).join(',')
                 );
                 
-                // İlk satır başlıklar, gerisi veriler.
                 data = headerRow + '\n' + csvRows.join('\n');
                 filename = `arac_envanter_yedek_${new Date().toISOString().slice(0, 10)}.csv`;
                 mimeType = 'text/csv';
@@ -237,6 +262,7 @@
             showForm(); 
             switchTab('single'); 
 
+            document.getElementById('type').value = vehicleToEdit.type || "Otomobil"; // Yeni alan
             document.getElementById('model').value = vehicleToEdit.model;
             document.getElementById('plate').value = vehicleToEdit.plate;
             document.getElementById('driver').value = vehicleToEdit.driver;
@@ -264,7 +290,7 @@
             cancelButton.classList.add('hidden');
         }
 
-        // Araç Listesini HTML'e Çizme Fonksiyonu
+        // Araç Listesini HTML'e Çizme Fonksiyonu - YENİ SÜTUN EKLENDİ
         function renderVehicles(vehicles) {
             if (!vehicleListBody) return;
             vehicleListBody.innerHTML = ''; 
@@ -289,7 +315,7 @@
                     : `Henüz kayıtlı araç bulunmamaktadır.`;
                 vehicleListBody.innerHTML = `
                     <tr>
-                        <td colspan="6" class="p-4 text-center text-gray-400 italic">
+                        <td colspan="7" class="p-4 text-center text-gray-400 italic">
                             ${message}
                         </td>
                     </tr>
@@ -308,9 +334,11 @@
                 const badgeClasses = expiringSoon 
                     ? 'bg-red-500 text-white shadow-md font-extrabold' 
                     : 'bg-green-100 text-green-700 font-semibold'; 
+                
+                const typeText = vehicle.type ? vehicle.type : 'Bilinmiyor';
 
                 row.innerHTML = `
-                    <td class="px-2 py-3 sm:p-4 table-cell font-bold text-gray-800">${vehicle.model}</td>
+                    <td class="px-2 py-3 sm:p-4 table-cell text-sm text-gray-500 whitespace-nowrap">${typeText}</td> <td class="px-2 py-3 sm:p-4 table-cell font-bold text-gray-800">${vehicle.model}</td>
                     <td class="px-2 py-3 sm:p-4 table-cell font-mono text-sm text-gray-600">${vehicle.plate}</td>
                     <td class="px-2 py-3 sm:p-4 table-cell text-gray-700">${vehicle.driver}</td>
                     <td class="px-2 py-3 sm:p-4 table-cell text-sm text-gray-500">${vehicle.unit}</td>
@@ -477,6 +505,7 @@
                 const policyEndString = vehicle.policyEnd || ''; 
 
                 return vehicle.model.toLowerCase().includes(searchTerm) ||
+                       (vehicle.type && vehicle.type.toLowerCase().includes(searchTerm)) || // Yeni alan
                        vehicle.plate.toLowerCase().includes(searchTerm) ||
                        vehicle.driver.toLowerCase().includes(searchTerm) ||
                        vehicle.unit.toLowerCase().includes(searchTerm) ||
@@ -486,9 +515,7 @@
             renderVehicles(filtered);
         }
 
-        // ************************************************
-        // DÜZELTİLDİ: Toplu İçe Aktarımı Yönetme Fonksiyonu 
-        // ************************************************
+        // Toplu İçe Aktarımı Yönetme Fonksiyonu - 6 veya 8 ALAN OLARAK GÜNCELLENDİ
         async function handleBulkImport() {
             if (!bulkDataInput || !bulkFileInput) return;
             
@@ -528,10 +555,9 @@
 
             const lines = rawData.split('\n').filter(line => line.trim() !== '');
             
-            // Eğer ilk satır başlık ise (export dosyasından geliyorsa), onu atla
-            // Basit bir kontrol: İlk satırda "model" kelimesini ara
             let dataLines = lines;
-            if (dataLines.length > 0 && dataLines[0].toLowerCase().includes('model')) {
+            // Basit kontrol: İlk satırda "model" veya "type" kelimesini ara
+            if (dataLines.length > 0 && (dataLines[0].toLowerCase().includes('model') || dataLines[0].toLowerCase().includes('type'))) {
                 dataLines = lines.slice(1);
             }
             
@@ -543,24 +569,23 @@
 
             for (let i = 0; i < dataLines.length; i++) {
                 const line = dataLines[i];
-                // CSV'de tırnak içindeki virgülleri doğru işlemek için regex yerine basit split kullanıldı.
-                // Bu, manuel giriş için idealdir. İhraç edilen dosya için ise manuel tırnak temizliği yapılmalıdır.
-                // İhracat formatımız tırnaklı olduğu için, veriyi tırnaklardan arındırıp split edelim.
+                // Tırnak içindeki virgülleri ayırırken tırnakları temizle
                 const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(p => p.replace(/^"|"$/g, '').trim()); 
 
                 const numFields = parts.length;
                 let vehicleData = {};
 
-                // İhracat dosyası formatı (7 alan: model, plate, driver, unit, policyEnd, createdAt, id)
-                if (numFields === 7) {
-                    const [model, plate, driver, unit, policyEnd, createdAt, id] = parts;
-                    vehicleData = { model, plate, driver, unit, policyEnd, createdAt: parseInt(createdAt), id };
+                // İhracat dosyası formatı (8 alan: type, model, plate, driver, unit, policyEnd, createdAt, id)
+                if (numFields === 8) {
+                    const [type, model, plate, driver, unit, policyEnd, createdAt, id] = parts;
+                    vehicleData = { type, model, plate, driver, unit, policyEnd, createdAt: parseInt(createdAt), id };
                 } 
-                // Manuel Giriş Formatı (5 alan: Model, Plaka, Sürücü, Birim, Poliçe Bitiş)
-                else if (numFields === 5) {
-                    const [model, plate, driver, unit, policyEnd] = parts;
+                // Yeni Manuel Giriş Formatı (6 alan: Type, Model, Plaka, Sürücü, Birim, Poliçe Bitiş)
+                else if (numFields === 6) { 
+                    const [type, model, plate, driver, unit, policyEnd] = parts;
                     // Yeni kayıt olduğu için yeni zaman damgaları atıyoruz.
                     vehicleData = { 
+                        type, 
                         model, 
                         plate, 
                         driver, 
@@ -569,14 +594,33 @@
                         id: (baseTimestamp + i).toString(), 
                         createdAt: baseTimestamp + i 
                     };
-                } else {
+                }
+                // Eski yedek dosyası (7 alan) veya eski manuel giriş (5 alan)
+                else if (numFields === 7 || numFields === 5) {
+                    let fields = {};
+                    if (numFields === 7) {
+                        const [model, plate, driver, unit, policyEnd, createdAt, id] = parts;
+                        fields = { model, plate, driver, unit, policyEnd, createdAt: parseInt(createdAt), id };
+                    } else if (numFields === 5) {
+                        const [model, plate, driver, unit, policyEnd] = parts;
+                        fields = { model, plate, driver, unit, policyEnd };
+                    }
+                    
+                    vehicleData = {
+                        type: "Otomobil", // Eski kayıtlara varsayılan tip ata
+                        ...fields,
+                        id: fields.id || (baseTimestamp + i).toString(),
+                        createdAt: fields.createdAt || (baseTimestamp + i)
+                    };
+                }
+                else {
                     failedCount++;
-                    errorMessages.push(`Satır ${i + 1} (Önizleme: ${line.substring(0, 20)}...): Eksik/fazla alan. (5 veya 7 bekleniyor, ${numFields} geldi).`);
+                    errorMessages.push(`Satır ${i + 1} (Önizleme: ${line.substring(0, 20)}...): Eksik/fazla alan. (5, 6, 7 veya 8 bekleniyor, ${numFields} geldi).`);
                     continue;
                 }
                 
-                // Temel doğrulama
-                if (!vehicleData.model || !vehicleData.plate || !vehicleData.driver || !vehicleData.unit || !vehicleData.policyEnd) {
+                // Temel doğrulama (Type artık zorunlu)
+                if (!vehicleData.type || !vehicleData.model || !vehicleData.plate || !vehicleData.driver || !vehicleData.unit || !vehicleData.policyEnd) {
                     failedCount++;
                     errorMessages.push(`Satır ${i + 1} (${vehicleData.plate || vehicleData.model}): Tüm temel alanlar doldurulmalıdır.`);
                     continue;
@@ -592,8 +636,6 @@
                 successCount++;
             }
             
-            // Mevcut kayıtlarla çakışmayı önlemek için basit bir kontrol yapılabilir.
-            // Şimdilik çakışma kontrolünü atlayıp hepsini ekliyoruz.
             vehiclesData = [...vehiclesData, ...vehiclesToAdd];
             vehiclesData.sort((a, b) => b.createdAt - a.createdAt);
             saveVehicles();
@@ -622,13 +664,14 @@
         function handleSingleEntrySubmit(e) {
             e.preventDefault();
             
+            const type = document.getElementById('type').value.trim(); // Yeni alan
             const model = document.getElementById('model').value.trim();
             const plate = document.getElementById('plate').value.trim();
             const driver = document.getElementById('driver').value.trim();
             const unit = document.getElementById('unit').value.trim();
             const policyEnd = document.getElementById('policyEnd').value.trim(); 
 
-            if (!model || !plate || !driver || !unit || !policyEnd) {
+            if (!type || !model || !plate || !driver || !unit || !policyEnd) {
                 showNotification("Lütfen tüm alanları doldurun.", 'error');
                 return;
             }
@@ -638,7 +681,7 @@
                 return;
             }
 
-            const vehicleData = { model, plate, driver, unit, policyEnd };
+            const vehicleData = { type, model, plate, driver, unit, policyEnd };
             
             if (currentEditingId) {
                 updateVehicle(currentEditingId, vehicleData);
@@ -649,7 +692,7 @@
         
         // Uygulama Başlatma Fonksiyonu
         function initApp() {
-            getElements();
+            getElements(); // Type selectbox'ı burada dolduruluyor.
             
             // Olay dinleyicilerini ayarla
             if (toggleFormButton) toggleFormButton.addEventListener('click', () => {
@@ -712,6 +755,12 @@
                 <form id="vehicleForm" class="space-y-5">
                     
                     <div>
+                        <label for="type" class="block text-sm font-medium text-gray-700 mb-1">Araç Tipi <span class="text-red-500">*</span></label>
+                        <select id="type" name="type" required class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20">
+                            </select>
+                    </div>
+
+                    <div>
                         <label for="model" class="block text-sm font-medium text-gray-700 mb-1">Araç Modeli <span class="text-red-500">*</span></label>
                         <input type="text" id="model" name="model" required class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20" placeholder="Örn: Ford Focus">
                     </div>
@@ -746,8 +795,8 @@
             <div id="bulkImportArea" class="hidden">
                 <p class="text-sm text-gray-700 mb-4 bg-yellow-50 p-4 rounded-xl border border-yellow-200">
                     Verileri **CSV dosyası (.csv)** ile yükleyebilir veya aşağıdaki alana yapıştırabilirsiniz. <br>
-                    <span class="font-semibold text-yellow-800">Manuel Giriş (5 Alan): </span> <code class="font-mono text-sm text-red-700">Model, Plaka, Sürücü, Birim, Poliçe Bitiş (YYYY-MM-DD)</code><br>
-                    <span class="font-semibold text-yellow-800">Yedek Dosyası (7 Alan): </span> İhraç edilen tüm alanları içerir.
+                    <span class="font-semibold text-yellow-800">Yeni Manuel Giriş (6 Alan): </span> <code class="font-mono text-sm text-red-700">Tip, Model, Plaka, Sürücü, Birim, Poliçe Bitiş (YYYY-MM-DD)</code><br>
+                    <span class="font-semibold text-yellow-800">Yedek Dosyası (8 Alan): </span> İhraç edilen tüm alanları içerir.
                 </p>
                 
                 <div class="mb-5 p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 transition duration-150">
@@ -766,7 +815,7 @@
                     </div>
                 </div>
 
-                <textarea id="bulkDataInput" rows="5" class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20 font-mono text-sm resize-none" placeholder="Örn:\nOpel Corsa, 34 XYZ 456, Mehmet Kaya, Muhasebe, 2026-11-15\nVW Passat, 06 ABC 123, Zeynep Demir, Satış, 2025-08-01"></textarea>
+                <textarea id="bulkDataInput" rows="5" class="input-focus w-full px-4 py-2 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20 font-mono text-sm resize-none" placeholder="Örn:\nOtomobil, Opel Corsa, 34 XYZ 456, Mehmet Kaya, Muhasebe, 2026-11-15\nKamyonet, VW Amarok, 06 ABC 123, Zeynep Demir, Satış, 2025-08-01"></textarea>
 
                 <button id="bulkImportButton" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl transition duration-300 shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-300 focus:ring-opacity-50 mt-4">
                     Toplu İçe Aktarımı Başlat
@@ -792,7 +841,7 @@
             </div>
             
             <div class="mb-6">
-                <input type="text" id="searchInput" placeholder="Model, plaka, sürücü, birim veya poliçe bitiş tarihine göre ara..." class="input-focus w-full px-4 py-3 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20">
+                <input type="text" id="searchInput" placeholder="Tip, model, plaka, sürücü, birim veya poliçe bitiş tarihine göre ara..." class="input-focus w-full px-4 py-3 border border-gray-300 rounded-xl shadow-inner transition duration-150 focus:ring-4 focus:ring-opacity-20">
             </div>
 
             <div id="loadingIndicator" class="text-center py-12 text-blue-500 font-semibold text-lg">
@@ -803,7 +852,7 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50 border-b-2 border-gray-200">
                         <tr>
-                            <th scope="col" class="px-2 py-3 sm:p-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Model</th>
+                            <th scope="col" class="px-2 py-3 sm:p-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Tip</th> <th scope="col" class="px-2 py-3 sm:p-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Model</th>
                             <th scope="col" class="px-2 py-3 sm:p-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Plaka</th>
                             <th scope="col" class="px-2 py-3 sm:p-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Kullanan Kişi</th>
                             <th scope="col" class="px-2 py-3 sm:p-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Birim</th>
