@@ -1,0 +1,452 @@
+[
+  {
+    "type": "Kamyonet",
+    "model": "Renault Master",
+    "plate": "35 MAR 334",
+    "driver": "Kamil Erdem",
+    "unit": "Lojistik",
+    "policyEnd": "2025-10-19",
+    "id": "1762796134784",
+    "createdAt": 1762796134784
+  },
+  {
+    "type": "Otomobil",
+    "model": "BMW 5 Serisi",
+    "plate": "06 LEV 001",
+    "driver": "Jülide Çam",
+    "unit": "Satış",
+    "policyEnd": "2027-01-04",
+    "id": "1762796134783",
+    "createdAt": 1762796134783
+  },
+  {
+    "type": "SUV",
+    "model": "Porsche Macan",
+    "plate": "34 KAS 778",
+    "driver": "İbrahim Koçak",
+    "unit": "Finans",
+    "policyEnd": "2026-07-28",
+    "id": "1762796134782",
+    "createdAt": 1762796134782
+  },
+  {
+    "type": "Otomobil",
+    "model": "Cupra Leon",
+    "plate": "54 İZM 445",
+    "driver": "Hande Göksu",
+    "unit": "Yönetim",
+    "policyEnd": "2025-11-14",
+    "id": "1762796134781",
+    "createdAt": 1762796134781
+  },
+  {
+    "type": "Ticari",
+    "model": "Fiat Ducato",
+    "plate": "16 HAK 112",
+    "driver": "Gökhan Bilgiç",
+    "unit": "Teknik Servis",
+    "policyEnd": "2027-05-25",
+    "id": "1762796134780",
+    "createdAt": 1762796134780
+  },
+  {
+    "type": "Otomobil",
+    "model": "Kia Ceed",
+    "plate": "42 GÜL 889",
+    "driver": "Fulya Özen",
+    "unit": "Merkez",
+    "policyEnd": "2026-08-08",
+    "id": "1762796134779",
+    "createdAt": 1762796134779
+  },
+  {
+    "type": "Kamyonet",
+    "model": "Nissan Navara",
+    "plate": "35 EFE 556",
+    "driver": "Emre Tunç",
+    "unit": "Lojistik",
+    "policyEnd": "2025-10-05",
+    "id": "1762796134778",
+    "createdAt": 1762796134778
+  },
+  {
+    "type": "SUV",
+    "model": "Mitsubishi ASX",
+    "plate": "06 DEM 223",
+    "driver": "Derya Mert",
+    "unit": "Satış",
+    "policyEnd": "2027-03-27",
+    "id": "1762796134777",
+    "createdAt": 1762796134777
+  },
+  {
+    "type": "Otomobil",
+    "model": "Citroen C4",
+    "plate": "34 CAN 990",
+    "driver": "Can Şahin",
+    "unit": "Pazarlama",
+    "policyEnd": "2026-06-19",
+    "id": "1762796134776",
+    "createdAt": 1762796134776
+  },
+  {
+    "type": "SUV",
+    "model": "Jeep Compass",
+    "plate": "54 BAG 667",
+    "driver": "Berna Işık",
+    "unit": "Finans",
+    "policyEnd": "2025-12-01",
+    "id": "1762796134775",
+    "createdAt": 1762796134775
+  },
+  {
+    "type": "Otomobil",
+    "model": "Alfa Romeo Giulia",
+    "plate": "16 ATE 334",
+    "driver": "Ali Duman",
+    "unit": "Yönetim",
+    "policyEnd": "2027-04-14",
+    "id": "1762796134774",
+    "createdAt": 1762796134774
+  },
+  {
+    "type": "Ticari",
+    "model": "Volkswagen Transporter",
+    "plate": "42 ZOR 001",
+    "driver": "Zafer Kılıç",
+    "unit": "Teknik Servis",
+    "policyEnd": "2026-09-20",
+    "id": "1762796134773",
+    "createdAt": 1762796134773
+  },
+  {
+    "type": "Otomobil",
+    "model": "Subaru Impreza",
+    "plate": "35 ZEY 778",
+    "driver": "Yasemin Sönmez",
+    "unit": "Merkez",
+    "policyEnd": "2025-11-09",
+    "id": "1762796134772",
+    "createdAt": 1762796134772
+  },
+  {
+    "type": "Kamyonet",
+    "model": "Toyota Hilux",
+    "plate": "06 ZER 445",
+    "driver": "Volkan Çelik",
+    "unit": "Lojistik",
+    "policyEnd": "2027-01-29",
+    "id": "1762796134771",
+    "createdAt": 1762796134771
+  },
+  {
+    "type": "SUV",
+    "model": "Volvo XC60",
+    "plate": "34 YAZ 112",
+    "driver": "Uğur Kaya",
+    "unit": "Satış",
+    "policyEnd": "2026-05-01",
+    "id": "1762796134770",
+    "createdAt": 1762796134770
+  },
+  {
+    "type": "Otomobil",
+    "model": "Mazda 3",
+    "plate": "54 YAL 889",
+    "driver": "Tuğçe Ersoy",
+    "unit": "Finans",
+    "policyEnd": "2025-10-15",
+    "id": "1762796134769",
+    "createdAt": 1762796134769
+  },
+  {
+    "type": "Ticari",
+    "model": "Opel Combo",
+    "plate": "16 VAR 556",
+    "driver": "Serdar Kale",
+    "unit": "Pazarlama",
+    "policyEnd": "2027-03-05",
+    "id": "1762796134768",
+    "createdAt": 1762796134768
+  },
+  {
+    "type": "Otomobil",
+    "model": "Seat Ibiza",
+    "plate": "42 VAD 223",
+    "driver": "Rıza Güneş",
+    "unit": "Merkez",
+    "policyEnd": "2026-07-07",
+    "id": "1762796134767",
+    "createdAt": 1762796134767
+  },
+  {
+    "type": "Kamyonet",
+    "model": "Isuzu D-Max",
+    "plate": "35 UMU 990",
+    "driver": "Pınar Demir",
+    "unit": "Lojistik",
+    "policyEnd": "2025-12-12",
+    "id": "1762796134766",
+    "createdAt": 1762796134766
+  },
+  {
+    "type": "SUV",
+    "model": "Land Rover Evoque",
+    "plate": "06 ULU 667",
+    "driver": "Ozan Bilge",
+    "unit": "Yönetim",
+    "policyEnd": "2027-02-28",
+    "id": "1762796134765",
+    "createdAt": 1762796134765
+  },
+  {
+    "type": "Otomobil",
+    "model": "Hyundai Elantra",
+    "plate": "34 TUR 334",
+    "driver": "Nehir Akın",
+    "unit": "Satış",
+    "policyEnd": "2026-06-03",
+    "id": "1762796134764",
+    "createdAt": 1762796134764
+  },
+  {
+    "type": "Ticari",
+    "model": "Ford Connect",
+    "plate": "54 TAR 001",
+    "driver": "Mert Öz",
+    "unit": "Teknik Servis",
+    "policyEnd": "2025-09-30",
+    "id": "1762796134763",
+    "createdAt": 1762796134763
+  },
+  {
+    "type": "Otomobil",
+    "model": "Mercedes A Serisi",
+    "plate": "16 SIM 778",
+    "driver": "Lale Koç",
+    "unit": "Yönetim",
+    "policyEnd": "2027-04-25",
+    "id": "1762796134762",
+    "createdAt": 1762796134762
+  },
+  {
+    "type": "SUV",
+    "model": "Kia Sportage",
+    "plate": "42 SER 445",
+    "driver": "Kemal Aydın",
+    "unit": "Finans",
+    "policyEnd": "2026-10-06",
+    "id": "1762796134761",
+    "createdAt": 1762796134761
+  },
+  {
+    "type": "Kamyonet",
+    "model": "Volkswagen Caddy",
+    "plate": "35 SAR 112",
+    "driver": "Jale Yılmaz",
+    "unit": "Lojistik",
+    "policyEnd": "2025-11-17",
+    "id": "1762796134760",
+    "createdAt": 1762796134760
+  },
+  {
+    "type": "Otomobil",
+    "model": "Renault Megane",
+    "plate": "06 RUM 890",
+    "driver": "İrem Çetin",
+    "unit": "Satış",
+    "policyEnd": "2027-01-11",
+    "id": "1762796134759",
+    "createdAt": 1762796134759
+  },
+  {
+    "type": "Otomobil",
+    "model": "Ford Fiesta",
+    "plate": "34 REN 567",
+    "driver": "Hakan Tura",
+    "unit": "Pazarlama",
+    "policyEnd": "2026-05-22",
+    "id": "1762796134758",
+    "createdAt": 1762796134758
+  },
+  {
+    "type": "SUV",
+    "model": "BMW X1",
+    "plate": "54 PIN 234",
+    "driver": "Gizem Sönmez",
+    "unit": "Merkez",
+    "policyEnd": "2025-12-07",
+    "id": "1762796134757",
+    "createdAt": 1762796134757
+  },
+  {
+    "type": "Ticari",
+    "model": "Citroen Berlingo",
+    "plate": "16 PAL 901",
+    "driver": "Fırat Menteş",
+    "unit": "Teknik Servis",
+    "policyEnd": "2027-03-31",
+    "id": "1762796134756",
+    "createdAt": 1762796134756
+  },
+  {
+    "type": "Otomobil",
+    "model": "Skoda Octavia",
+    "plate": "42 OTA 678",
+    "driver": "Ece Kara",
+    "unit": "Satış",
+    "policyEnd": "2026-08-25",
+    "id": "1762796134755",
+    "createdAt": 1762796134755
+  },
+  {
+    "type": "Kamyonet",
+    "model": "Mercedes Sprinter",
+    "plate": "35 NAR 123",
+    "driver": "Deniz Demirci",
+    "unit": "Lojistik",
+    "policyEnd": "2025-10-01",
+    "id": "1762796134754",
+    "createdAt": 1762796134754
+  },
+  {
+    "type": "SUV",
+    "model": "Audi Q3",
+    "plate": "06 MIR 789",
+    "driver": "Cemal Ak",
+    "unit": "Yönetim",
+    "policyEnd": "2027-02-14",
+    "id": "1762796134753",
+    "createdAt": 1762796134753
+  },
+  {
+    "type": "Otomobil",
+    "model": "Hyundai i10",
+    "plate": "34 LAV 456",
+    "driver": "Burcu Yıldız",
+    "unit": "Finans",
+    "policyEnd": "2026-06-29",
+    "id": "1762796134752",
+    "createdAt": 1762796134752
+  },
+  {
+    "type": "Ticari",
+    "model": "Peugeot Partner",
+    "plate": "54 KAN 098",
+    "driver": "Ahmet Güneş",
+    "unit": "Teknik Servis",
+    "policyEnd": "2025-11-20",
+    "id": "1762796134751",
+    "createdAt": 1762796134751
+  },
+  {
+    "type": "Otomobil",
+    "model": "Honda Civic",
+    "plate": "16 JAP 765",
+    "driver": "Zeynep Kurt",
+    "unit": "Merkez",
+    "policyEnd": "2027-05-16",
+    "id": "1762796134750",
+    "createdAt": 1762796134750
+  },
+  {
+    "type": "Kamyonet",
+    "model": "Fiat Fiorino",
+    "plate": "42 IST 543",
+    "driver": "Yaman Erol",
+    "unit": "Lojistik",
+    "policyEnd": "2026-08-03",
+    "id": "1762796134749",
+    "createdAt": 1762796134749
+  },
+  {
+    "type": "SUV",
+    "model": "Dacia Duster",
+    "plate": "35 HEK 109",
+    "driver": "Vildan Can",
+    "unit": "Pazarlama",
+    "policyEnd": "2025-10-27",
+    "id": "1762796134748",
+    "createdAt": 1762796134748
+  },
+  {
+    "type": "Otomobil",
+    "model": "Toyota Corolla",
+    "plate": "06 GRM 987",
+    "driver": "Ufuk Şahin",
+    "unit": "Satış",
+    "policyEnd": "2027-03-09",
+    "id": "1762796134747",
+    "createdAt": 1762796134747
+  },
+  {
+    "type": "Otomobil",
+    "model": "Opel Corsa",
+    "plate": "34 FIR 321",
+    "driver": "Taner Akın",
+    "unit": "Finans",
+    "policyEnd": "2026-07-18",
+    "id": "1762796134746",
+    "createdAt": 1762796134746
+  },
+  {
+    "type": "SUV",
+    "model": "Nissan Qashqai",
+    "plate": "54 ETE 654",
+    "driver": "Selin Demir",
+    "unit": "Yönetim",
+    "policyEnd": "2025-12-24",
+    "id": "1762796134745",
+    "createdAt": 1762796134745
+  },
+  {
+    "type": "Ticari",
+    "model": "Renault Kangoo",
+    "plate": "16 DUI 210",
+    "driver": "Rıza Öztürk",
+    "unit": "Teknik Servis",
+    "policyEnd": "2027-04-01",
+    "id": "1762796134744",
+    "createdAt": 1762796134744
+  },
+  {
+    "type": "Otomobil",
+    "model": "Fiat Egea",
+    "plate": "42 CIL 876",
+    "driver": "Pınar Kaya",
+    "unit": "Merkez",
+    "policyEnd": "2026-09-15",
+    "id": "1762796134743",
+    "createdAt": 1762796134743
+  },
+  {
+    "type": "Kamyonet",
+    "model": "Ford Transit",
+    "plate": "35 BEF 432",
+    "driver": "Onur Kılıç",
+    "unit": "Lojistik",
+    "policyEnd": "2025-11-05",
+    "id": "1762796134742",
+    "createdAt": 1762796134742
+  },
+  {
+    "type": "SUV",
+    "model": "Peugeot 3008",
+    "plate": "06 AZO 567",
+    "driver": "Nilay Yılmaz",
+    "unit": "Satış",
+    "policyEnd": "2027-01-20",
+    "id": "1762796134741",
+    "createdAt": 1762796134741
+  },
+  {
+    "type": "Otomobil",
+    "model": "Volkswagen Golf",
+    "plate": "34 ZAP 901",
+    "driver": "Kerem Çelik",
+    "unit": "Pazarlama",
+    "policyEnd": "2026-05-10",
+    "id": "1762796134740",
+    "createdAt": 1762796134740
+  }
+]
